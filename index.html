@@ -1,4 +1,4 @@
-<!doctype html><html lang="bn"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>html{color-scheme:dark}body{margin:0}</style><title>Archeria</title>
+<!doctype html><html lang="bn"><head><meta charset="utf-8"><meta name="theme-color" content="#02140a"><link rel="manifest" href="manifest.webmanifest"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>html{color-scheme:dark}body{margin:0}</style><title>Archeria</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
 /* Layout: green phone console. Header, 3 angled buttons, transcript, curved node graph + orb, controls, headlines + tasks, app launcher. */
@@ -132,6 +132,55 @@ ul.tasks li.done{color:var(--dim);text-decoration:line-through}
 <div class="toast" id="toast"></div>
 
 <script>
+/* Browser version: provides the same window.Android helpers the phone app has */
+var APPPK={'YouTube':['www.youtube.com','com.google.android.youtube'],'TikTok':['www.tiktok.com','com.zhiliaoapp.musically'],'Facebook':['www.facebook.com','com.facebook.katana'],'WhatsApp':['wa.me','com.whatsapp'],'Messenger':['m.me','com.facebook.orca'],'Instagram':['www.instagram.com','com.instagram.android'],'Gmail':['mail.google.com','com.google.android.gm'],'Google':['www.google.com','com.google.android.googlequicksearchbox'],'Maps':['maps.google.com','com.google.android.apps.maps'],'Play Store':['play.google.com','com.android.vending']};
+function appHref(a){
+  if(!window.WEB||!APPPK[a.n])return a.u;
+  var p=APPPK[a.n];
+  return 'intent://'+p[0]+'/#Intent;scheme=https;package='+p[1]+';S.browser_fallback_url='+encodeURIComponent(a.u)+';end';
+}
+if(!window.Android){
+  window.WEB=true;
+  (function(){
+    var LS=function(k,d){try{var v=localStorage.getItem(k);return v===null?d:v}catch(e){return d}};
+    var SV=function(k,v){try{localStorage.setItem(k,v)}catch(e){}};
+    var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+    window.Android={
+      hasKey:function(){return LS('ar_key','').length>0},
+      setKey:function(k){SV('ar_key',(k||'').trim())},
+      getModel:function(){return LS('ar_model','gemini-2.5-flash')},
+      setModel:function(m){if(m)SV('ar_model',m)},
+      openApp:function(){return false},
+      speak:function(t){try{speechSynthesis.cancel();var u=new SpeechSynthesisUtterance(t);u.lang='bn-BD';speechSynthesis.speak(u)}catch(e){}},
+      listen:function(){
+        if(!SR){if(window.onHeard)window.onHeard('');return}
+        var rec=new SR();rec.lang='bn-BD';rec.interimResults=false;
+        rec.onresult=function(e){window.onHeard(e.results[0][0].transcript)};
+        rec.onerror=function(){window.onHeard('')};
+        rec.start();
+      },
+      ask:function(id,prompt,sys,hist){
+        var c=[];
+        try{JSON.parse(hist).forEach(function(o){c.push({role:o.r,parts:[{text:o.t}]})})}catch(e){}
+        c.push({role:'user',parts:[{text:prompt}]});
+        fetch('https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(LS('ar_model','gemini-2.5-flash'))+':generateContent',{
+          method:'POST',
+          headers:{'Content-Type':'application/json','x-goog-api-key':LS('ar_key','')},
+          body:JSON.stringify({contents:c,system_instruction:{parts:[{text:sys}]}})
+        }).then(function(r){return r.text().then(function(t){return{ok:r.ok,s:r.status,t:t}})})
+        .then(function(x){
+          if(!x.ok){window.onAI(id,'','HTTP '+x.s+' '+x.t.slice(0,160));return}
+          var j=JSON.parse(x.t);
+          var out=j.candidates[0].content.parts.map(function(p){return p.text||''}).join('');
+          window.onAI(id,out,'');
+        }).catch(function(e){window.onAI(id,'',String(e))});
+      }
+    };
+    if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(function(){})}
+  })();
+}
+</script>
+<script>
 (function(){
   var $=function(i){return document.getElementById(i)};
   function ls(k,d){try{var v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}}
@@ -152,7 +201,7 @@ ul.tasks li.done{color:var(--dim);text-decoration:line-through}
     {n:'Maps',k:['maps','map','ম্যাপ'],u:'https://maps.google.com',c:'#34a853',l:'MP'},
     {n:'Play Store',k:['play store','playstore','প্লে স্টোর'],u:'https://play.google.com/store',c:'#00a86b',l:'PS'}
   ];
-  APPS.forEach(function(a){var e=document.createElement('a');e.href=a.u;e.target='_blank';e.rel='noopener';e.onclick=function(ev){if(window.Android&&Android.openApp(a.n))ev.preventDefault()};e.innerHTML='<b style="background:'+a.c+'">'+a.l+'</b>'+a.n;$('apps').appendChild(e)});
+  APPS.forEach(function(a){var e=document.createElement('a');e.href=appHref(a);e.target='_blank';e.rel='noopener';e.onclick=function(ev){if(window.Android&&Android.openApp(a.n))ev.preventDefault()};e.innerHTML='<b style="background:'+a.c+'">'+a.l+'</b>'+a.n;$('apps').appendChild(e)});
 
   function toast(t){var e=$('toast');e.textContent=t;e.className='toast show';clearTimeout(toast.t);toast.t=setTimeout(function(){e.className='toast'},2800)}
   function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
@@ -161,7 +210,7 @@ ul.tasks li.done{color:var(--dim);text-decoration:line-through}
     var tr=$('tr');
     var w=document.createElement('p');w.className='who';w.style.alignSelf=who==='me'?'flex-end':'flex-start';w.textContent=who==='me'?'YOU':'ARCHER';
     var p=document.createElement('p');p.className=who;p.textContent=text;
-    if(app){var a=document.createElement('a');a.href=app.u;a.target='_blank';a.rel='noopener';a.textContent='Open '+app.n+' →';p.appendChild(document.createElement('br'));p.appendChild(a)}
+    if(app){var a=document.createElement('a');a.href=appHref(app);a.target='_blank';a.rel='noopener';a.textContent='Open '+app.n+' →';p.appendChild(document.createElement('br'));p.appendChild(a)}
     tr.appendChild(w);tr.appendChild(p);tr.scrollTop=tr.scrollHeight;
     log.push({w:who,t:text});log=log.slice(-60);save('ar_log',log);
   }
@@ -174,7 +223,7 @@ ul.tasks li.done{color:var(--dim);text-decoration:line-through}
   }
   function reply(q){
     var s=q.toLowerCase(),ap=findApp(s);
-    if(ap){if(window.Android){var ok=Android.openApp(ap.n);return{t:ok?ap.n+' খুলছি...':ap.n+' ফোনে পাওয়া যায়নি, নিচের বাটনে ব্রাউজারে খুলুন।',app:ok?null:ap}}return{t:ap.n+' খুলতে নিচের বাটনে ট্যাপ করুন।',app:ap}}
+    if(ap){if(window.Android){var ok=Android.openApp(ap.n);return{t:ok?ap.n+' খুলছি...':ap.n+(window.WEB?' খুলতে নিচের বাটনে ট্যাপ করুন।':' ফোনে পাওয়া যায়নি, নিচের বাটনে ব্রাউজারে খুলুন।'),app:ok?null:ap}}return{t:ap.n+' খুলতে নিচের বাটনে ট্যাপ করুন।',app:ap}}
     if(window.Android&&/open|খোল|ওপেন|চালু/.test(s)){var nm=q.replace(/open|launch|please|খোলো|খুলো|খোল|ওপেন করো|ওপেন কর|ওপেন|চালু করো|চালু কর|চালু/gi,'').trim();if(nm.length>1&&nm.length<30&&Android.openApp(nm))return{t:nm+' খুলছি...'}}
     var m=q.match(/(?:remember|মনে রাখ(?:বে|ো|ুন)?)[\s:]*(.+)/i);
     if(m){mem.push(m[1].trim());save('ar_mem',mem);return{t:'মনে রাখলাম: '+m[1].trim()}}
