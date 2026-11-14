@@ -1,4 +1,4 @@
-
+ 
 name: Build APK
 on:
 push:
@@ -13,12 +13,13 @@ steps:
 - uses: actions/setup-java@v4
 with:
 distribution: 'temurin'
-java-version: '17'  ! uses: gradle/actions/setup-gradle@v4
+java-version: '17'
+- uses: gradle/actions/setup-gradle@v4
 with:
 gradle-version: '8.9'
-  ! name: Build debug APK
+- name: Build debug APK
 run: gradle assembleDebug --no-daemon
-  ! name: Publish APK as a release
+- name: Publish APK as a release
 uses: softprops/action-gh-release@v2
 with:
 tag_name: "build-${{ github.run_number }}"
