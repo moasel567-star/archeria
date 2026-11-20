@@ -91,7 +91,7 @@ ul.tasks li.done{color:var(--dim);text-decoration:line-through}
 </head><body><div class="app">
   <div class="hdr">
     <span></span>
-    <h1><svg class="logo" viewBox="0 0 24 24"><path d="M12 2 3 21h18z" fill="#1fe86b"/><rect x="8" y="12.5" width="8" height="4" rx="2" fill="#031006"/></svg>ARCHER AI<small>v47</small></h1>
+    <h1><svg class="logo" viewBox="0 0 24 24"><path d="M12 2 3 21h18z" fill="#1fe86b"/><rect x="8" y="12.5" width="8" height="4" rx="2" fill="#031006"/></svg>ARCHER AI<small>v48</small></h1>
     <button class="sq" id="sq" aria-label="Settings">&#9881;</button>
   </div>
   <div class="row3">
@@ -486,7 +486,7 @@ if(!window.Android){
     if(!window.Android&&/memory|মেমরি/.test(s))return{t:mem.length?'আমার মনে আছে: '+mem.join('; '):'এখনো কিছু সেভ করা নেই। "remember ..." বলুন।'};
     return null;
   }
-  function speak(t){try{if(!aiOn){relisten(400);return}if(window.Android){window.__aiSpeaking=true;try{vad.spT=Date.now();vad.echo=0;vad.bargeN=0;vad.spPre=[]}catch(e){}Android.speak(t);speed=3;$('spk').innerHTML='&bull; SPEAKING &bull;';setTimeout(function(){speed=1;if(!(talk&&vad&&vad.on))$('spk').innerHTML='&bull; READY &bull;'},2500);return}if(!window.speechSynthesis)return;var u=new SpeechSynthesisUtterance(t);speechSynthesis.cancel();speechSynthesis.speak(u);speed=3;$('spk').innerHTML='&bull; SPEAKING &bull;';setTimeout(function(){speed=1;if(!(talk&&vad&&vad.on))$('spk').innerHTML='&bull; READY &bull;'},2000)}catch(e){}}
+  function speak(t){try{t=String(t).replace(/(^|[^\u0980-\u09FF])বস(?![\u0980-\u09FF])/g,'$1বোস');if(!aiOn){relisten(400);return}if(window.Android){window.__aiSpeaking=true;try{vad.spT=Date.now();vad.echo=0;vad.bargeN=0;vad.spPre=[]}catch(e){}Android.speak(t);speed=3;$('spk').innerHTML='&bull; SPEAKING &bull;';setTimeout(function(){speed=1;if(!(talk&&vad&&vad.on))$('spk').innerHTML='&bull; READY &bull;'},2500);return}if(!window.speechSynthesis)return;var u=new SpeechSynthesisUtterance(t);speechSynthesis.cancel();speechSynthesis.speak(u);speed=3;$('spk').innerHTML='&bull; SPEAKING &bull;';setTimeout(function(){speed=1;if(!(talk&&vad&&vad.on))$('spk').innerHTML='&bull; READY &bull;'},2000)}catch(e){}}
   var hist=[],nid=0,lastQ='';
   function ask(q){
     if(!q)return; say('me',q);
