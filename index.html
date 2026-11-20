@@ -91,7 +91,7 @@ ul.tasks li.done{color:var(--dim);text-decoration:line-through}
 </head><body><div class="app">
   <div class="hdr">
     <span></span>
-    <h1><svg class="logo" viewBox="0 0 24 24"><path d="M12 2 3 21h18z" fill="#1fe86b"/><rect x="8" y="12.5" width="8" height="4" rx="2" fill="#031006"/></svg>ARCHER AI<small>v49</small></h1>
+    <h1><svg class="logo" viewBox="0 0 24 24"><path d="M12 2 3 21h18z" fill="#1fe86b"/><rect x="8" y="12.5" width="8" height="4" rx="2" fill="#031006"/></svg>ARCHER AI<small>v50</small></h1>
     <button class="sq" id="sq" aria-label="Settings">&#9881;</button>
   </div>
   <div class="row3">
@@ -428,6 +428,7 @@ if(!window.Android){
     if(!/youtube|ইউটিউব/.test(s))return null;
     if(!/গান|song|music|মিউজিক|বাজাও|বাজিয়ে|চালাও|চালিয়ে|শোনাও|শুনিয়ে|প্লে|play|সার্চ|search|ভিডিও|video|নাটক|খুঁজ|দেখাও|দেখতে/.test(s))return null;
     var qq=q.replace(/youtube|ইউটিউব(?:-এ|ে|ের)?|ঢুকে|ঢুকো|চালু করে দাও|চালু করে দিন|চালু করো|চালু কর|চালু|বাজিয়ে দাও|বাজাও|চালিয়ে দাও|চালাও|শুনিয়ে দাও|শোনাও|প্লে করো|প্লে কর|প্লে|play|সার্চ করো|সার্চ কর|search|খোলো|খুলো|ওপেন করো|ওপেন|দাও|দিন|করে|করো|কর/gi,' ').replace(/(?:^|\s)(?:এ|তে|-এ)(?=\s|$)/g,' ').replace(/\s+/g,' ').trim();
+    if(qq.split(/\s+/).length>7||q.split(/\s+/).length>16)return null;
     if(!qq)qq='গান';
     var su='https://www.youtube.com/results?search_query='+encodeURIComponent(qq);
     var iu='intent:#Intent;action=android.media.action.MEDIA_PLAY_FROM_SEARCH;package=com.google.android.youtube;S.query='+encodeURIComponent(qq)+';S.android.intent.extra.focus=vnd.android.cursor.item%2F*;S.browser_fallback_url='+encodeURIComponent(su)+';end';
