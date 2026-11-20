@@ -91,7 +91,7 @@ ul.tasks li.done{color:var(--dim);text-decoration:line-through}
 </head><body><div class="app">
   <div class="hdr">
     <span></span>
-    <h1><svg class="logo" viewBox="0 0 24 24"><path d="M12 2 3 21h18z" fill="#1fe86b"/><rect x="8" y="12.5" width="8" height="4" rx="2" fill="#031006"/></svg>ARCHER AI<small>v42</small></h1>
+    <h1><svg class="logo" viewBox="0 0 24 24"><path d="M12 2 3 21h18z" fill="#1fe86b"/><rect x="8" y="12.5" width="8" height="4" rx="2" fill="#031006"/></svg>ARCHER AI<small>v43</small></h1>
     <button class="sq" id="sq" aria-label="Settings">&#9881;</button>
   </div>
   <div class="row3">
@@ -169,6 +169,7 @@ if(!window.Android){
         rec.start();
       },
       ask:function(id,prompt,sys,hist,img,aud,amime){
+        window.__t0=Date.now();
         var c=[];
         try{JSON.parse(hist).forEach(function(o){c.push({role:o.r,parts:[{text:o.t}]})})}catch(e){}
         c.push({role:'user',parts:[{text:prompt}]});
@@ -201,11 +202,11 @@ if(!window.Android){
         }
         var gr=!!window.__gr;window.__gr=false;
         function once(model){
-          var ac=new AbortController();setTimeout(function(){try{ac.abort()}catch(e){}},gr?60000:28000);
+          var ac=new AbortController();setTimeout(function(){try{ac.abort()}catch(e){}},gr?60000:15000);
           return fetch(base+'models/'+encodeURIComponent(model)+':generateContent',{
             method:'POST',signal:ac.signal,
             headers:{'Content-Type':'application/json','x-goog-api-key':key},
-            body:JSON.stringify((function(){var o={contents:c,system_instruction:{parts:[{text:sys}]},generationConfig:{maxOutputTokens:(gr?1500:1024),temperature:(aud?0.3:0.8)}};if(/2\.5-flash/.test(model))o.generationConfig.thinkingConfig={thinkingBudget:0};if(gr)o.tools=[{google_search:{}}];return o})())
+            body:JSON.stringify((function(){var o={contents:c,system_instruction:{parts:[{text:sys}]},generationConfig:{maxOutputTokens:(gr?1500:1024),temperature:(aud?0.3:0.8)}};if(/2\.5-flash/.test(model))o.generationConfig.thinkingConfig={thinkingBudget:0};else if(/gemini-3/.test(model))o.generationConfig.thinkingConfig={thinkingLevel:'minimal'};if(gr)o.tools=[{google_search:{}}];return o})())
           }).then(function(r){return r.text().then(function(t){return{ok:r.ok,s:r.status,t:t}})});
         }
         function run(){
@@ -227,6 +228,7 @@ if(!window.Android){
                   var out=((j.candidates&&j.candidates[0]&&j.candidates[0].content&&j.candidates[0].content.parts)||[]).map(function(p){return p.text||''}).join('');
                   if(!out)throw new Error('খালি উত্তর এসেছে, আবার বলুন।');
                   if(!gr)SV('ar_model',m);
+                  window.__lastInfo=m+' '+((Date.now()-(window.__t0||Date.now()))/1000).toFixed(1)+'s';
                   return out;
                 }
                 if(fatal(x.s,x.t))throw new Error(friendly(x.s,x.t));
@@ -491,6 +493,7 @@ if(!window.Android){
   }
   window.__isCmd=function(t){if(appByName(t.toLowerCase()))return true;return /খোল|খুল|ওপেন|চালু|চালাও|ফোন|কল কর|মেসেজ|এসএমএস|ইউটিউব|ফেসবুক|টিকটক|হোয়াটস|মেসেঞ্জার|ইমু|ইনস্টাগ্রাম|টুইটার|হোম|সেটিংস|প্লে স্টোর|চ্যাটজিপিটি|মালিক|লক করো|তোমার নাম|তুমি কে|আপনি কে|আমি কে|আমার নাম|\bopen\b|\bcall\b|\bplay\b/i.test(t)};
   window.onAI=function(id,out,err){
+    try{if(window.__lastInfo&&!err)toast(window.__lastInfo)}catch(e){}
     var isAud=audioIds[id];delete audioIds[id];
     $('spk').innerHTML=talk?'&bull; LISTENING &bull;':'&bull; READY &bull;';
     if(err){say('ai','সমস্যা হয়েছে: '+String(err).slice(0,180));relisten(1500);return}
