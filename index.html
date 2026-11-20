@@ -91,7 +91,7 @@ ul.tasks li.done{color:var(--dim);text-decoration:line-through}
 </head><body><div class="app">
   <div class="hdr">
     <span></span>
-    <h1><svg class="logo" viewBox="0 0 24 24"><path d="M12 2 3 21h18z" fill="#1fe86b"/><rect x="8" y="12.5" width="8" height="4" rx="2" fill="#031006"/></svg>ARCHER AI<small>v48</small></h1>
+    <h1><svg class="logo" viewBox="0 0 24 24"><path d="M12 2 3 21h18z" fill="#1fe86b"/><rect x="8" y="12.5" width="8" height="4" rx="2" fill="#031006"/></svg>ARCHER AI<small>v49</small></h1>
     <button class="sq" id="sq" aria-label="Settings">&#9881;</button>
   </div>
   <div class="row3">
@@ -263,7 +263,8 @@ if(!window.Android){
           })});
         }
         function groqChat(text){
-          var msgs=[{role:'system',content:sys+' The user text comes from speech recognition and may contain wrong words; use the conversation to work out the most likely meaning. Always try your best guess of what he meant and answer it. Only if the text is completely meaningless, reply only: "আরেকটু স্পষ্ট করে বলবেন বন্ধু?". Keep answers short.'}];
+          var sysG=sys.replace(/Latest headlines:[\s\S]*$/,function(m){return m.slice(0,380)});
+          var msgs=[{role:'system',content:sysG+' The user text comes from speech recognition and may contain wrong words; use the conversation to work out the most likely meaning. Always try your best guess of what he meant and answer it. Only if the text is completely meaningless, reply only: "আরেকটু স্পষ্ট করে বলবেন বন্ধু?". Keep answers short.'}];
           try{JSON.parse(hist).forEach(function(o){msgs.push({role:o.r==='model'?'assistant':'user',content:o.t})})}catch(e){}
           msgs.push({role:'user',content:text});
           var models=[],gi=0;
@@ -271,6 +272,7 @@ if(!window.Android){
             var m=models[gi++];
             return gfetch('https://api.groq.com/openai/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+gkey},body:JSON.stringify({model:m,messages:msgs,max_tokens:300,temperature:0.7})}).then(function(r){return r.text().then(function(t){
               if(r.ok){var j=JSON.parse(t);var o=(j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content)||'';if(!o){if(gi<models.length)return go();throw new Error('খালি উত্তর এসেছে')}return o.trim()}
+              if((r.status===400||r.status===413)&&/reduce|too large|context|length/i.test(t)&&!window.__tiny){window.__tiny=1;msgs[0].content='You are Archer AI, a friendly Bangla voice assistant. Always call the user বস. Answer in 1 to 3 short spoken Bangla sentences.';gi--;return go().then(function(o){window.__tiny=0;return o},function(e){window.__tiny=0;throw e})}
               if((r.status===429||r.status===404||r.status===403||r.status===400||r.status>=500)&&gi<models.length)return go();
               throw new Error('Groq ('+r.status+'): '+gwhy(t));
             })});
@@ -486,7 +488,7 @@ if(!window.Android){
     if(!window.Android&&/memory|মেমরি/.test(s))return{t:mem.length?'আমার মনে আছে: '+mem.join('; '):'এখনো কিছু সেভ করা নেই। "remember ..." বলুন।'};
     return null;
   }
-  function speak(t){try{t=String(t).replace(/(^|[^\u0980-\u09FF])বস(?![\u0980-\u09FF])/g,'$1বোস');if(!aiOn){relisten(400);return}if(window.Android){window.__aiSpeaking=true;try{vad.spT=Date.now();vad.echo=0;vad.bargeN=0;vad.spPre=[]}catch(e){}Android.speak(t);speed=3;$('spk').innerHTML='&bull; SPEAKING &bull;';setTimeout(function(){speed=1;if(!(talk&&vad&&vad.on))$('spk').innerHTML='&bull; READY &bull;'},2500);return}if(!window.speechSynthesis)return;var u=new SpeechSynthesisUtterance(t);speechSynthesis.cancel();speechSynthesis.speak(u);speed=3;$('spk').innerHTML='&bull; SPEAKING &bull;';setTimeout(function(){speed=1;if(!(talk&&vad&&vad.on))$('spk').innerHTML='&bull; READY &bull;'},2000)}catch(e){}}
+  function speak(t){try{window.__lastSpoken=String(t);window.__lastSpokeT=Date.now();t=String(t).replace(/(^|[^\u0980-\u09FF])বস(?![\u0980-\u09FF])/g,'$1'+bossWord());if(!aiOn){relisten(400);return}if(window.Android){window.__aiSpeaking=true;try{vad.spT=Date.now();vad.echo=0;vad.bargeN=0;vad.spPre=[]}catch(e){}Android.speak(t);speed=3;$('spk').innerHTML='&bull; SPEAKING &bull;';setTimeout(function(){speed=1;if(!(talk&&vad&&vad.on))$('spk').innerHTML='&bull; READY &bull;'},2500);return}if(!window.speechSynthesis)return;var u=new SpeechSynthesisUtterance(t);speechSynthesis.cancel();speechSynthesis.speak(u);speed=3;$('spk').innerHTML='&bull; SPEAKING &bull;';setTimeout(function(){speed=1;if(!(talk&&vad&&vad.on))$('spk').innerHTML='&bull; READY &bull;'},2000)}catch(e){}}
   var hist=[],nid=0,lastQ='';
   function ask(q){
     if(!q)return; say('me',q);
@@ -541,9 +543,20 @@ if(!window.Android){
       if(vad&&(vad.on||vad.native)){vad.busy=false}else{Android.listen()}
     },ms);
   }
-  window.onSpoke=function(){window.__aiSpeaking=false;relisten(250)};
+  window.onSpoke=function(){window.__aiSpeaking=false;window.__lastSpokeT=Date.now();relisten(700)};
+  function echoLike(t){
+    try{
+      if(!window.__lastSpoken||Date.now()-(window.__lastSpokeT||0)>25000)return false;
+      var tok=function(x){return String(x).toLowerCase().split(/[^\u0980-\u09FFa-z0-9]+/).filter(function(w){return w.length>1})};
+      var a=tok(t),b={};tok(window.__lastSpoken).forEach(function(w){b[w]=1});
+      if(a.length<3)return false;
+      var hit=0;a.forEach(function(w){if(b[w])hit++});
+      return hit/a.length>=0.6;
+    }catch(e){return false}
+  }
   window.onHeard=function(t,err){
     if(err==='bg')return;
+    if(t&&echoLike(t)){if(talk)relisten(500);return}
     if(t){$('spk').innerHTML='&bull; THINKING &bull;';ask(t);return}
     if(err==='not-allowed'||err==='service-not-allowed'||err==='no-support'){talk=false;$('vol').style.background='';$('spk').innerHTML='&bull; READY &bull;';toast(err==='no-support'?'এই ব্রাউজারে মাইক চলে না, Chrome ব্যবহার করুন':'মাইকের অনুমতি দিন (Allow)');return}
     if(talk){relisten(600)}else{$('spk').innerHTML='&bull; READY &bull;';toast('শুনতে পাইনি, আবার বলুন')}
@@ -567,7 +580,7 @@ if(!window.Android){
   function pSoul(){open('<h2>SOUL</h2><p>Personality of your assistant.</p><div class="bar2"><input id="si" value="'+esc(soul)+'"><button id="ss">SAVE</button></div>',function(){$('ss').onclick=function(){soul=$('si').value;save('ar_soul',soul);toast('Soul saved');close()}})}
   function pSetting(){
     var A=window.Android;
-    open('<h2>SETTINGS</h2><p>Assistant name</p><div class="bar2"><input id="ni" value="'+esc(name)+'"><button id="ns">SAVE</button></div>'+(A?'<p>Gemini API key</p><div class="bar2"><input id="ki" type="password" placeholder="'+((A.hasGemini?A.hasGemini():A.hasKey())?'saved (paste to replace)':'paste key here')+'" autocomplete="off"><button id="ks">SAVE</button></div><p>Groq API key (backup)</p><div class="bar2"><input id="gi" type="password" placeholder="'+((A.hasGroq&&A.hasGroq())?'saved (paste to replace)':'paste Groq key here')+'" autocomplete="off"><button id="gs">SAVE</button></div><p>Model</p><div class="bar2"><input id="mi" value="'+esc(A.getModel())+'"><button id="ms">SAVE</button></div><p>Barge-in: AI কথা বলার সময় আপনি কথা বললে থামবে</p><div class="bar2"><input id="bgv" value="'+(bargeOn()?'ON (চালু)':'OFF (বন্ধ)')+'" readonly><button id="bgb">SWITCH</button></div><p>পেছনে শোনা (ইউটিউব/ফেসবুকের ভেতরেও শোনে, কিন্তু ধীর ও কম নির্ভুল)</p><div class="bar2"><input id="bmv" value="'+(bgModeOn()?'ON (চালু)':'OFF (বন্ধ - দ্রুত শোনা)')+'" readonly><button id="bmb">SWITCH</button></div><p>মাইক সংবেদনশীলতা (আস্তে বললেও শুনবে)</p><div class="bar2"><input id="snv" value="'+sensName(sensV())+'" readonly><button id="snb">SWITCH</button></div><p>কণ্ঠ (Voice)</p><div class="bar2"><input id="vcv" value="'+(voiceF()?'মেয়ে (Girl)':'ছেলে (Boy)')+'" readonly><button id="vcb">SWITCH</button></div>':'<p style="color:var(--dim)">AI brain: demo mode in the browser. Use the Android app for real AI.</p>'),function(){
+    open('<h2>SETTINGS</h2><p>Assistant name</p><div class="bar2"><input id="ni" value="'+esc(name)+'"><button id="ns">SAVE</button></div>'+(A?'<p>Gemini API key</p><div class="bar2"><input id="ki" type="password" placeholder="'+((A.hasGemini?A.hasGemini():A.hasKey())?'saved (paste to replace)':'paste key here')+'" autocomplete="off"><button id="ks">SAVE</button></div><p>Groq API key (backup)</p><div class="bar2"><input id="gi" type="password" placeholder="'+((A.hasGroq&&A.hasGroq())?'saved (paste to replace)':'paste Groq key here')+'" autocomplete="off"><button id="gs">SAVE</button></div><p>Model</p><div class="bar2"><input id="mi" value="'+esc(A.getModel())+'"><button id="ms">SAVE</button></div><p>Barge-in: AI কথা বলার সময় আপনি কথা বললে থামবে</p><div class="bar2"><input id="bgv" value="'+(bargeOn()?'ON (চালু)':'OFF (বন্ধ)')+'" readonly><button id="bgb">SWITCH</button></div><p>"বস" শব্দের উচ্চারণ (শুনে যেটা ঠিক লাগে বেছে নিন)</p><div class="bar2"><input id="bwv" value="'+bossWord()+'" readonly><button id="bwb">SWITCH</button></div><p>পেছনে শোনা (ইউটিউব/ফেসবুকের ভেতরেও শোনে, কিন্তু ধীর ও কম নির্ভুল)</p><div class="bar2"><input id="bmv" value="'+(bgModeOn()?'ON (চালু)':'OFF (বন্ধ - দ্রুত শোনা)')+'" readonly><button id="bmb">SWITCH</button></div><p>মাইক সংবেদনশীলতা (আস্তে বললেও শুনবে)</p><div class="bar2"><input id="snv" value="'+sensName(sensV())+'" readonly><button id="snb">SWITCH</button></div><p>কণ্ঠ (Voice)</p><div class="bar2"><input id="vcv" value="'+(voiceF()?'মেয়ে (Girl)':'ছেলে (Boy)')+'" readonly><button id="vcb">SWITCH</button></div>':'<p style="color:var(--dim)">AI brain: demo mode in the browser. Use the Android app for real AI.</p>'),function(){
       $('ns').onclick=function(){name=$('ni').value||'Archer AI';save('ar_name2',name);toast('Saved');close()};
       if(A){
         $('ks').onclick=function(){var v=$('ki').value.trim();if(v){A.setKey(v);toast('Key saved');close()}};
@@ -575,6 +588,7 @@ if(!window.Android){
         $('ms').onclick=function(){A.setModel($('mi').value.trim());toast('Saved');close()};
         $('snb').onclick=function(){var v=sensV(),n=v>=1?0.7:(v>=0.65?0.45:1.0);try{localStorage.setItem('ar_sens',String(n))}catch(e){}applySens();$('snv').value=sensName(n);toast('মাইক: '+sensName(n))};
         $('vcb').onclick=function(){var f=!voiceF();try{localStorage.setItem('ar_voice',f?'f':'m')}catch(e){}applyVoice();$('vcv').value=f?'মেয়ে (Girl)':'ছেলে (Boy)';toast(f?'মেয়ের কণ্ঠ':'ছেলের কণ্ঠ');setTimeout(function(){speak('এখন আমার কণ্ঠ এরকম।')},300)};
+        $('bwb').onclick=function(){var i=0;try{i=(parseInt(localStorage.getItem('ar_bossw')||'0',10)||0)+1;localStorage.setItem('ar_bossw',String(i%BOSSW.length))}catch(e){}$('bwv').value=bossWord();setTimeout(function(){speak('হ্যালো বস, কেমন আছেন?')},200)};
         $('bmb').onclick=function(){var on=!bgModeOn();try{localStorage.setItem('ar_bg',on?'1':'0')}catch(e){}$('bmv').value=on?'ON (চালু)':'OFF (বন্ধ - দ্রুত শোনা)';toast(on?'পেছনে শোনা চালু। কথোপকথন বন্ধ করে আবার চালু করুন':'দ্রুত শোনা চালু। কথোপকথন বন্ধ করে আবার চালু করুন')};
         $('bgb').onclick=function(){var on=!bargeOn();try{localStorage.setItem('ar_barge',on?'1':'0')}catch(e){}$('bgv').value=on?'ON (চালু)':'OFF (বন্ধ)';toast(on?'কথার মাঝে থামানো চালু':'কথার মাঝে থামানো বন্ধ')};
       }
@@ -745,6 +759,8 @@ if(!window.Android){
   function sensName(v){return v>=1?'স্বাভাবিক':(v>=0.65?'বেশি':'অনেক বেশি')}
   function applySens(){try{if(window.AndroidTTS&&AndroidTTS.setSens)AndroidTTS.setSens(sensV())}catch(e){}}
   setTimeout(applySens,1500);
+  var BOSSW=['বোস','বস','boss','বশ','বসস'];
+  function bossWord(){var i=0;try{i=parseInt(localStorage.getItem('ar_bossw')||'0',10)||0}catch(e){}return BOSSW[i%BOSSW.length]}
   function voiceF(){try{return localStorage.getItem('ar_voice')!=='m'}catch(e){return true}}
   function applyVoice(){try{if(window.AndroidTTS&&AndroidTTS.setVoice)AndroidTTS.setVoice(voiceF())}catch(e){}}
   setTimeout(applyVoice,1500);
