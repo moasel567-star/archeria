@@ -91,7 +91,7 @@ ul.tasks li.done{color:var(--dim);text-decoration:line-through}
 </head><body><div class="app">
   <div class="hdr">
     <span></span>
-    <h1><svg class="logo" viewBox="0 0 24 24"><path d="M12 2 3 21h18z" fill="#1fe86b"/><rect x="8" y="12.5" width="8" height="4" rx="2" fill="#031006"/></svg>ARCHER AI<small>v41</small></h1>
+    <h1><svg class="logo" viewBox="0 0 24 24"><path d="M12 2 3 21h18z" fill="#1fe86b"/><rect x="8" y="12.5" width="8" height="4" rx="2" fill="#031006"/></svg>ARCHER AI<small>v44</small></h1>
     <button class="sq" id="sq" aria-label="Settings">&#9881;</button>
   </div>
   <div class="row3">
@@ -169,6 +169,7 @@ if(!window.Android){
         rec.start();
       },
       ask:function(id,prompt,sys,hist,img,aud,amime){
+        window.__t0=Date.now();
         var c=[];
         try{JSON.parse(hist).forEach(function(o){c.push({role:o.r,parts:[{text:o.t}]})})}catch(e){}
         c.push({role:'user',parts:[{text:prompt}]});
@@ -193,7 +194,7 @@ if(!window.Android){
               var ms=(j.models||[]).filter(function(m){
                 return (m.supportedGenerationMethods||[]).indexOf('generateContent')>-1&&/gemini/.test(m.name)&&!/image|tts|audio|live|embed|robotics|computer|gemma|learnlm/.test(m.name);
               });
-              var score=function(m){var n=m.name,s=0;if(/flash/.test(n))s+=4;if(/lite/.test(n))s-=1;if(/preview|exp|thinking/.test(n))s-=2;if(/latest/.test(n))s+=1;return s};
+              var score=function(m){var n=m.name,s=0;if(/flash/.test(n))s+=4;if(/lite/.test(n))s-=1;if(/preview|exp|thinking/.test(n))s-=2;if(/latest/.test(n))s+=1;if(/3\.1/.test(n)&&/flash-lite/.test(n))s+=8;return s};
               ms.sort(function(a,b){var d=score(b)-score(a);return d||(a.name<b.name?1:-1)});
               return ms.map(function(m){return m.name.replace('models/','')});
             });
@@ -201,15 +202,15 @@ if(!window.Android){
         }
         var gr=!!window.__gr;window.__gr=false;
         function once(model){
-          var ac=new AbortController();setTimeout(function(){try{ac.abort()}catch(e){}},gr?60000:28000);
+          var ac=new AbortController();setTimeout(function(){try{ac.abort()}catch(e){}},gr?60000:15000);
           return fetch(base+'models/'+encodeURIComponent(model)+':generateContent',{
             method:'POST',signal:ac.signal,
             headers:{'Content-Type':'application/json','x-goog-api-key':key},
-            body:JSON.stringify((function(){var o={contents:c,system_instruction:{parts:[{text:sys}]},generationConfig:{maxOutputTokens:(gr?1500:1024),temperature:(aud?0.3:0.8)}};if(/2\.5-flash/.test(model))o.generationConfig.thinkingConfig={thinkingBudget:0};if(gr)o.tools=[{google_search:{}}];return o})())
+            body:JSON.stringify((function(){var o={contents:c,system_instruction:{parts:[{text:sys}]},generationConfig:{maxOutputTokens:(gr?1500:1024),temperature:(aud?0.3:0.8)}};if(/2\.5-flash/.test(model))o.generationConfig.thinkingConfig={thinkingBudget:0};else if(/gemini-3/.test(model))o.generationConfig.thinkingConfig={thinkingLevel:'minimal'};if(gr)o.tools=[{google_search:{}}];return o})())
           }).then(function(r){return r.text().then(function(t){return{ok:r.ok,s:r.status,t:t}})});
         }
         function run(){
-          var saved=gr?'gemini-flash-latest':LS('ar_model','');
+          var saved=gr?'gemini-flash-latest':LS('ar_model','');if(saved==='gemini-2.5-flash'||saved==='gemini-2.5-flash-lite')saved='';
           var listed=!!saved;return (saved?Promise.resolve([]):list().catch(function(e){if(e.fatal)throw e;return[]})).then(function(names){
             var order=[];
             if(saved)order.push(saved);
@@ -227,11 +228,12 @@ if(!window.Android){
                   var out=((j.candidates&&j.candidates[0]&&j.candidates[0].content&&j.candidates[0].content.parts)||[]).map(function(p){return p.text||''}).join('');
                   if(!out)throw new Error('খালি উত্তর এসেছে, আবার বলুন।');
                   if(!gr)SV('ar_model',m);
+                  window.__lastInfo=m+' '+((Date.now()-(window.__t0||Date.now()))/1000).toFixed(1)+'s';
                   return out;
                 }
                 if(fatal(x.s,x.t))throw new Error(friendly(x.s,x.t));
                 last=friendly(x.s,x.t)+' [মডেল: '+m+']';
-                if(x.s===429)throw new Error(last);
+                if(x.s===429&&i>=order.length)throw new Error(last);
                 if(!listed){listed=true;return list().catch(function(){return[]}).then(function(ns){ns.slice(0,4).forEach(function(n){if(order.indexOf(n)<0)order.push(n)});return next()})}
                 return sleep(120).then(next);
               },function(e){last='ইন্টারনেট ধীর, আবার চেষ্টা করছি';return sleep(120).then(next)});
@@ -491,6 +493,7 @@ if(!window.Android){
   }
   window.__isCmd=function(t){if(appByName(t.toLowerCase()))return true;return /খোল|খুল|ওপেন|চালু|চালাও|ফোন|কল কর|মেসেজ|এসএমএস|ইউটিউব|ফেসবুক|টিকটক|হোয়াটস|মেসেঞ্জার|ইমু|ইনস্টাগ্রাম|টুইটার|হোম|সেটিংস|প্লে স্টোর|চ্যাটজিপিটি|মালিক|লক করো|তোমার নাম|তুমি কে|আপনি কে|আমি কে|আমার নাম|\bopen\b|\bcall\b|\bplay\b/i.test(t)};
   window.onAI=function(id,out,err){
+    try{if(window.__lastInfo&&!err)toast(window.__lastInfo)}catch(e){}
     var isAud=audioIds[id];delete audioIds[id];
     $('spk').innerHTML=talk?'&bull; LISTENING &bull;':'&bull; READY &bull;';
     if(err){say('ai','সমস্যা হয়েছে: '+String(err).slice(0,180));relisten(1500);return}
@@ -844,7 +847,7 @@ if(!window.Android){
       +'Notice the user\'s mood from his words: if he is happy, share the joy; if he is sad, tired or stressed, be gentle and caring and listen first without lecturing. '
       +'Keep the thread: refer back to what was said earlier, and sometimes ask ONE natural follow-up question or bring up a related topic, but not every time, no needless questions, no repeating yourself, and if the user is busy or gives a short command just do it briefly. '
       +'Understand everyday Bangladeshi spoken Bangla and regional dialects (Dhaka, Chattogram, Sylhet, Noakhali, Barishal, Rajshahi, Rangpur and others), wrong pronunciation and incomplete sentences, and work out the intent from context; if it is truly unclear ask ONE short question. '
-      +'Answer in simple natural spoken Bangla in 1 to 3 very short sentences, under 40 words unless the user asks for detail (your words are read aloud and speed matters), with warmth, light humor and personality, using words like বস, ভাই or বন্ধু only now and then. '
+      +'Answer in simple natural spoken Bangla in 1 to 3 very short sentences, under 40 words unless the user asks for detail (your words are read aloud and speed matters), with warmth, light humor and personality, and ALWAYS address the user as "বস" in every reply: everybody who talks to you, owner or guest, is called বস (the owner may also be called মালিক). '
       +'Use the remembered facts naturally and never ask again for something you already know. '
       +'You cannot open apps yourself: the app opens them when the user says an app name with open, like "ফেসবুক খোলো". If the user asks to open an app and you are answering, do not say you cannot; say you did not catch the app name and ask which one (YouTube, Facebook, WhatsApp, TikTok, IMO...). '
       +'MEMORY: only when the user clearly tells you a lasting personal fact or preference about himself, or says to remember something, add at the very end of your reply a new line exactly like [[MEM: short Bangla fact]]. Never mention this tag, and never save passwords, secret codes or phone numbers. '
