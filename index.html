@@ -91,7 +91,7 @@ ul.tasks li.done{color:var(--dim);text-decoration:line-through}
 </head><body><div class="app">
   <div class="hdr">
     <span></span>
-    <h1><svg class="logo" viewBox="0 0 24 24"><path d="M12 2 3 21h18z" fill="#1fe86b"/><rect x="8" y="12.5" width="8" height="4" rx="2" fill="#031006"/></svg>ARCHER AI<small>v50</small></h1>
+    <h1><svg class="logo" viewBox="0 0 24 24"><path d="M12 2 3 21h18z" fill="#1fe86b"/><rect x="8" y="12.5" width="8" height="4" rx="2" fill="#031006"/></svg>ARCHER AI<small>v52</small></h1>
     <button class="sq" id="sq" aria-label="Settings">&#9881;</button>
   </div>
   <div class="row3">
@@ -178,6 +178,15 @@ if(!window.Android){
         var key=LS('ar_key','');
         var base='https://generativelanguage.googleapis.com/v1beta/';
         var sleep=function(ms){return new Promise(function(r){setTimeout(r,ms)})};
+        function badOut(o){
+          try{
+            var x=String(o||'').replace(/HEARD:[\s\S]*?REPLY:/,'').replace(/\s+/g,'');
+            if(x.length<30)return false;
+            if(/(.{2,8})\1{4,}/.test(x))return true;
+            var u={};for(var i=0;i<x.length;i++)u[x[i]]=1;
+            return Object.keys(u).length<8;
+          }catch(e){return false}
+        }
         function friendly(s,t){
           t=t||'';
           if(s===503)return 'গুগলের সার্ভারে এখন চাপ বেশি (503)। একটু পরে আবার বলুন।';
@@ -226,6 +235,7 @@ if(!window.Android){
                 if(x.ok){
                   var j=JSON.parse(x.t);
                   var out=((j.candidates&&j.candidates[0]&&j.candidates[0].content&&j.candidates[0].content.parts)||[]).map(function(p){return p.text||''}).join('');
+                  if(out&&badOut(out))out='';
                   if(!out){last='খালি উত্তর এসেছে, আবার বলুন।';if(i<order.length)return sleep(100).then(next);throw new Error(last)}
                   if(!gr)SV('ar_model',m);
                   window.__lastInfo=m+' '+((Date.now()-(window.__t0||Date.now()))/1000).toFixed(1)+'s';
@@ -271,7 +281,7 @@ if(!window.Android){
           function go(){
             var m=models[gi++];
             return gfetch('https://api.groq.com/openai/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+gkey},body:JSON.stringify({model:m,messages:msgs,max_tokens:300,temperature:0.7})}).then(function(r){return r.text().then(function(t){
-              if(r.ok){var j=JSON.parse(t);var o=(j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content)||'';if(!o){if(gi<models.length)return go();throw new Error('খালি উত্তর এসেছে')}return o.trim()}
+              if(r.ok){var j=JSON.parse(t);var o=(j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content)||'';if(o&&badOut(o))o='';if(!o){if(gi<models.length)return go();throw new Error('বুঝতে পারিনি বস, আবার একটু স্পষ্ট করে বলবেন?')}return o.trim()}
               if((r.status===400||r.status===413)&&/reduce|too large|context|length/i.test(t)&&!window.__tiny){window.__tiny=1;msgs[0].content='You are Archer AI, a friendly Bangla voice assistant. Always call the user বস. Answer in 1 to 3 short spoken Bangla sentences.';gi--;return go().then(function(o){window.__tiny=0;return o},function(e){window.__tiny=0;throw e})}
               if((r.status===429||r.status===404||r.status===403||r.status===400||r.status>=500)&&gi<models.length)return go();
               throw new Error('Groq ('+r.status+'): '+gwhy(t));
@@ -853,6 +863,19 @@ if(!window.Android){
       });
     }else{Android.listen()}
   }
+
+  /* ---------- watchdog: if listening silently stopped, start it again ---------- */
+  var lastListen=Date.now();
+  try{var _L=Android.listen;Android.listen=function(){lastListen=Date.now();return _L.apply(Android,arguments)}}catch(e){}
+  setInterval(function(){
+    try{
+      if(!talk||document.hidden||window.__aiSpeaking)return;
+      if(vad&&(vad.on||vad.native))return;
+      var st=$('spk').innerText||'';
+      if(/THINKING|SPEAKING/.test(st))return;
+      if(Date.now()-lastListen>9000){Android.listen()}
+    }catch(e){}
+  },3000);
 
   /* ---------- keep the screen awake, keep listening ---------- */
   var wl=null;
