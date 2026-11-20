@@ -91,7 +91,7 @@ ul.tasks li.done{color:var(--dim);text-decoration:line-through}
 </head><body><div class="app">
   <div class="hdr">
     <span></span>
-    <h1><svg class="logo" viewBox="0 0 24 24"><path d="M12 2 3 21h18z" fill="#1fe86b"/><rect x="8" y="12.5" width="8" height="4" rx="2" fill="#031006"/></svg>ARCHER AI<small>v45</small></h1>
+    <h1><svg class="logo" viewBox="0 0 24 24"><path d="M12 2 3 21h18z" fill="#1fe86b"/><rect x="8" y="12.5" width="8" height="4" rx="2" fill="#031006"/></svg>ARCHER AI<small>v46</small></h1>
     <button class="sq" id="sq" aria-label="Settings">&#9881;</button>
   </div>
   <div class="row3">
@@ -323,6 +323,10 @@ if(!window.Android){
         else pr=run().catch(function(e){
           if(/429|সীমা/.test(String(e&&e.message)))window.__gemSkip=Date.now()+1800000;
           if(useG&&!gr)return groqRun().catch(function(e2){throw new Error(String(e.message)+' | '+String(e2.message))});
+          if(gr){
+            if(useG){gr=false;return groqRun().then(function(o){return 'ইন্টারনেটে সরাসরি খুঁজতে পারলাম না, তাই আজকের হেডলাইন থেকে বলছি। '+o}).catch(function(e2){throw new Error('খবর খোঁজার ফ্রি সীমা শেষ। উপরের হেডলাইনগুলো দেখুন।')})}
+            throw new Error('খবর খোঁজার ফ্রি সীমা শেষ। উপরের হেডলাইনগুলো দেখুন।');
+          }
           throw e;
         });
         pr.then(function(out){window.onAI(id,out,'')}).catch(function(e){window.onAI(id,'',String((e&&e.message)||e))});
