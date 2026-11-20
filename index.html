@@ -91,7 +91,7 @@ ul.tasks li.done{color:var(--dim);text-decoration:line-through}
 </head><body><div class="app">
   <div class="hdr">
     <span></span>
-    <h1><svg class="logo" viewBox="0 0 24 24"><path d="M12 2 3 21h18z" fill="#1fe86b"/><rect x="8" y="12.5" width="8" height="4" rx="2" fill="#031006"/></svg>ARCHER AI<small>v41</small></h1>
+    <h1><svg class="logo" viewBox="0 0 24 24"><path d="M12 2 3 21h18z" fill="#1fe86b"/><rect x="8" y="12.5" width="8" height="4" rx="2" fill="#031006"/></svg>ARCHER AI<small>v42</small></h1>
     <button class="sq" id="sq" aria-label="Settings">&#9881;</button>
   </div>
   <div class="row3">
@@ -193,7 +193,7 @@ if(!window.Android){
               var ms=(j.models||[]).filter(function(m){
                 return (m.supportedGenerationMethods||[]).indexOf('generateContent')>-1&&/gemini/.test(m.name)&&!/image|tts|audio|live|embed|robotics|computer|gemma|learnlm/.test(m.name);
               });
-              var score=function(m){var n=m.name,s=0;if(/flash/.test(n))s+=4;if(/lite/.test(n))s-=1;if(/preview|exp|thinking/.test(n))s-=2;if(/latest/.test(n))s+=1;return s};
+              var score=function(m){var n=m.name,s=0;if(/flash/.test(n))s+=4;if(/lite/.test(n))s-=1;if(/preview|exp|thinking/.test(n))s-=2;if(/latest/.test(n))s+=1;if(/3\.1/.test(n)&&/flash-lite/.test(n))s+=8;return s};
               ms.sort(function(a,b){var d=score(b)-score(a);return d||(a.name<b.name?1:-1)});
               return ms.map(function(m){return m.name.replace('models/','')});
             });
@@ -209,7 +209,7 @@ if(!window.Android){
           }).then(function(r){return r.text().then(function(t){return{ok:r.ok,s:r.status,t:t}})});
         }
         function run(){
-          var saved=gr?'gemini-flash-latest':LS('ar_model','');
+          var saved=gr?'gemini-flash-latest':LS('ar_model','');if(saved==='gemini-2.5-flash'||saved==='gemini-2.5-flash-lite')saved='';
           var listed=!!saved;return (saved?Promise.resolve([]):list().catch(function(e){if(e.fatal)throw e;return[]})).then(function(names){
             var order=[];
             if(saved)order.push(saved);
@@ -231,7 +231,7 @@ if(!window.Android){
                 }
                 if(fatal(x.s,x.t))throw new Error(friendly(x.s,x.t));
                 last=friendly(x.s,x.t)+' [মডেল: '+m+']';
-                if(x.s===429)throw new Error(last);
+                if(x.s===429&&i>=order.length)throw new Error(last);
                 if(!listed){listed=true;return list().catch(function(){return[]}).then(function(ns){ns.slice(0,4).forEach(function(n){if(order.indexOf(n)<0)order.push(n)});return next()})}
                 return sleep(120).then(next);
               },function(e){last='ইন্টারনেট ধীর, আবার চেষ্টা করছি';return sleep(120).then(next)});
