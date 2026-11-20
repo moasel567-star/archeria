@@ -91,7 +91,7 @@ ul.tasks li.done{color:var(--dim);text-decoration:line-through}
 </head><body><div class="app">
   <div class="hdr">
     <span></span>
-    <h1><svg class="logo" viewBox="0 0 24 24"><path d="M12 2 3 21h18z" fill="#1fe86b"/><rect x="8" y="12.5" width="8" height="4" rx="2" fill="#031006"/></svg>ARCHER AI<small>v44</small></h1>
+    <h1><svg class="logo" viewBox="0 0 24 24"><path d="M12 2 3 21h18z" fill="#1fe86b"/><rect x="8" y="12.5" width="8" height="4" rx="2" fill="#031006"/></svg>ARCHER AI<small>v45</small></h1>
     <button class="sq" id="sq" aria-label="Settings">&#9881;</button>
   </div>
   <div class="row3">
@@ -305,7 +305,21 @@ if(!window.Android){
           return groqChat(prompt);
         }
         var useG=!!gkey,skipGem=(Date.now()<(window.__gemSkip||0))&&!gr,pr;
-        if(useG&&(!key||skipGem))pr=groqRun();
+        function hedged(){
+          return new Promise(function(res,rej){
+            var settled=false,hp=null,t0=Date.now();
+            function ok(v,who){if(!settled){settled=true;if(who)window.__lastInfo=who+' '+((Date.now()-t0)/1000).toFixed(1)+'s';res(v)}}
+            function bad(e){if(!settled){settled=true;rej(e)}}
+            var tm=setTimeout(function(){if(settled)return;hp=groqRun();hp.catch(function(){});hp.then(function(v){ok(v,'Groq')})},3500);
+            run().then(function(v){clearTimeout(tm);ok(v)},function(e){
+              clearTimeout(tm);
+              if(/429|সীমা/.test(String(e&&e.message)))window.__gemSkip=Date.now()+1800000;
+              (hp||groqRun()).then(function(v){ok(v,'Groq')},function(e2){bad(new Error(String(e.message)+' | '+String(e2.message)))});
+            });
+          });
+        }
+        if(useG&&key&&!skipGem&&!gr&&!aud)pr=hedged();
+        else if(useG&&(!key||skipGem))pr=groqRun();
         else pr=run().catch(function(e){
           if(/429|সীমা/.test(String(e&&e.message)))window.__gemSkip=Date.now()+1800000;
           if(useG&&!gr)return groqRun().catch(function(e2){throw new Error(String(e.message)+' | '+String(e2.message))});
