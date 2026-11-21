@@ -91,7 +91,7 @@ ul.tasks li.done{color:var(--dim);text-decoration:line-through}
 </head><body><div class="app">
   <div class="hdr">
     <span></span>
-    <h1><svg class="logo" viewBox="0 0 24 24"><path d="M12 2 3 21h18z" fill="#1fe86b"/><rect x="8" y="12.5" width="8" height="4" rx="2" fill="#031006"/></svg>ARCHER AI<small>v53</small></h1>
+    <h1><svg class="logo" viewBox="0 0 24 24"><path d="M12 2 3 21h18z" fill="#1fe86b"/><rect x="8" y="12.5" width="8" height="4" rx="2" fill="#031006"/></svg>ARCHER AI<small>v54</small></h1>
     <button class="sq" id="sq" aria-label="Settings">&#9881;</button>
   </div>
   <div class="row3">
@@ -571,6 +571,11 @@ if(!window.Android){
     if(err==='bg')return;
     if(t&&echoLike(t)){if(talk)relisten(500);return}
     if(t){$('spk').innerHTML='&bull; THINKING &bull;';ask(t);return}
+    if((err==='not-allowed'||err==='service-not-allowed')&&talk&&window.AndroidTTS&&AndroidTTS.srOk){
+      var okp=false;try{okp=!!AndroidTTS.srOk()}catch(e){}
+      window.__naN=(Date.now()-(window.__naT||0)<20000)?(window.__naN||0)+1:1;window.__naT=Date.now();
+      if(okp&&window.__naN<=6){relisten(1200);return}
+    }
     if(err==='not-allowed'||err==='service-not-allowed'||err==='no-support'){talk=false;$('vol').style.background='';$('spk').innerHTML='&bull; READY &bull;';toast(err==='no-support'?'এই ব্রাউজারে মাইক চলে না, Chrome ব্যবহার করুন':'মাইকের অনুমতি দিন (Allow)');return}
     if(talk){relisten(600)}else{$('spk').innerHTML='&bull; READY &bull;';toast('শুনতে পাইনি, আবার বলুন')}
   };
