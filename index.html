@@ -91,7 +91,7 @@ ul.tasks li.done{color:var(--dim);text-decoration:line-through}
 </head><body><div class="app">
   <div class="hdr">
     <span></span>
-    <h1><svg class="logo" viewBox="0 0 24 24"><path d="M12 2 3 21h18z" fill="#1fe86b"/><rect x="8" y="12.5" width="8" height="4" rx="2" fill="#031006"/></svg>ARCHER AI<small>v52</small></h1>
+    <h1><svg class="logo" viewBox="0 0 24 24"><path d="M12 2 3 21h18z" fill="#1fe86b"/><rect x="8" y="12.5" width="8" height="4" rx="2" fill="#031006"/></svg>ARCHER AI<small>v53</small></h1>
     <button class="sq" id="sq" aria-label="Settings">&#9881;</button>
   </div>
   <div class="row3">
@@ -181,6 +181,8 @@ if(!window.Android){
         function badOut(o){
           try{
             var x=String(o||'').replace(/HEARD:[\s\S]*?REPLY:/,'').replace(/\s+/g,'');
+            var tk=String(o||'').replace(/HEARD:[\s\S]*?REPLY:/,'').split(/[\s,।.!?"'()\-]+/);
+            for(var k=0;k<tk.length;k++){if(tk[k].length>22&&/[\u0980-\u09FF]/.test(tk[k]))return true}
             if(x.length<30)return false;
             if(/(.{2,8})\1{4,}/.test(x))return true;
             var u={};for(var i=0;i<x.length;i++)u[x[i]]=1;
@@ -280,7 +282,7 @@ if(!window.Android){
           var models=[],gi=0;
           function go(){
             var m=models[gi++];
-            return gfetch('https://api.groq.com/openai/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+gkey},body:JSON.stringify({model:m,messages:msgs,max_tokens:300,temperature:0.7})}).then(function(r){return r.text().then(function(t){
+            return gfetch('https://api.groq.com/openai/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+gkey},body:JSON.stringify({model:m,messages:msgs,max_tokens:300,temperature:0.5})}).then(function(r){return r.text().then(function(t){
               if(r.ok){var j=JSON.parse(t);var o=(j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content)||'';if(o&&badOut(o))o='';if(!o){if(gi<models.length)return go();throw new Error('বুঝতে পারিনি বস, আবার একটু স্পষ্ট করে বলবেন?')}return o.trim()}
               if((r.status===400||r.status===413)&&/reduce|too large|context|length/i.test(t)&&!window.__tiny){window.__tiny=1;msgs[0].content='You are Archer AI, a friendly Bangla voice assistant. Always call the user বস. Answer in 1 to 3 short spoken Bangla sentences.';gi--;return go().then(function(o){window.__tiny=0;return o},function(e){window.__tiny=0;throw e})}
               if((r.status===429||r.status===404||r.status===403||r.status===400||r.status>=500)&&gi<models.length)return go();
