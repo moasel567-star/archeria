@@ -91,7 +91,7 @@ ul.tasks li.done{color:var(--dim);text-decoration:line-through}
 </head><body><div class="app">
   <div class="hdr">
     <span></span>
-    <h1><svg class="logo" viewBox="0 0 24 24"><path d="M12 2 3 21h18z" fill="#1fe86b"/><rect x="8" y="12.5" width="8" height="4" rx="2" fill="#031006"/></svg>ARCHER AI<small>v57</small></h1>
+    <h1><svg class="logo" viewBox="0 0 24 24"><path d="M12 2 3 21h18z" fill="#1fe86b"/><rect x="8" y="12.5" width="8" height="4" rx="2" fill="#031006"/></svg>ARCHER AI<small>v58</small></h1>
     <button class="sq" id="sq" aria-label="Settings">&#9881;</button>
   </div>
   <div class="row3">
@@ -438,14 +438,46 @@ if(!window.Android){
     return{t:label+'কে ফোন করছি। নিচের সবুজ বাটন চাপুন।',app:{n:'Call',u:'tel:'+cleanNum(num),direct:true,lbl:'📞 '+label+'কে ফোন করুন ▶'}};
   }
 
-  function musicCmd(q,s){
-    if(!/youtube|ইউটিউব/.test(s))return null;
-    if(!/গান|song|music|মিউজিক|বাজাও|বাজিয়ে|চালাও|চালিয়ে|শোনাও|শুনিয়ে|প্লে|play|সার্চ|search|ভিডিও|video|নাটক|খুঁজ|দেখাও|দেখতে/.test(s))return null;
-    var qq=q.replace(/youtube|ইউটিউব(?:-এ|ে|ের)?|ঢুকে|ঢুকো|চালু করে দাও|চালু করে দিন|চালু করো|চালু কর|চালু|বাজিয়ে দাও|বাজাও|চালিয়ে দাও|চালাও|শুনিয়ে দাও|শোনাও|প্লে করো|প্লে কর|প্লে|play|সার্চ করো|সার্চ কর|search|খোলো|খুলো|ওপেন করো|ওপেন|দাও|দিন|করে|করো|কর/gi,' ').replace(/(?:^|\s)(?:এ|তে|-এ)(?=\s|$)/g,' ').replace(/\s+/g,' ').trim();
-    if(qq.split(/\s+/).length>7||q.split(/\s+/).length>16)return null;
-    if(!qq)qq='গান';
+  function ytKey(){try{return (localStorage.getItem('ar_ytkey')||'').trim()}catch(e){return ''}}
+  function ytIntent(id,fb){return 'intent://www.youtube.com/watch?v='+encodeURIComponent(id)+'#Intent;scheme=https;package=com.google.android.youtube;S.browser_fallback_url='+encodeURIComponent(fb||('https://www.youtube.com/watch?v='+id))+';end'}
+  function ytSearchIntent(qq){
     var su='https://www.youtube.com/results?search_query='+encodeURIComponent(qq);
-    var iu='intent:#Intent;action=android.media.action.MEDIA_PLAY_FROM_SEARCH;package=com.google.android.youtube;S.query='+encodeURIComponent(qq)+';S.android.intent.extra.focus=vnd.android.cursor.item%2F*;S.browser_fallback_url='+encodeURIComponent(su)+';end';
+    return 'intent:#Intent;action=android.media.action.MEDIA_PLAY_FROM_SEARCH;package=com.google.android.youtube;S.query='+encodeURIComponent(qq)+';S.android.intent.extra.focus=vnd.android.cursor.item%2F*;S.browser_fallback_url='+encodeURIComponent(su)+';end';
+  }
+  function ytReply(t,app){setTimeout(function(){say('ai',t,app||null);speak(t)},200)}
+  // Looks the song up with the YouTube Data API (only when the user saved a key); plays the exact first video.
+  function ytApiPlay(qq){
+    var k=ytKey(),su='https://www.youtube.com/results?search_query='+encodeURIComponent(qq);
+    var viaSearch=function(why){
+      ytReply((why?why+' ':'')+'YouTube-এর সার্চ দিয়ে "'+qq+'" খুলছি।');
+      setTimeout(function(){goUrl(ytSearchIntent(qq))},900);
+    };
+    var done=false,tm=setTimeout(function(){if(done)return;done=true;viaSearch('ইন্টারনেট ধীর।')},7000);
+    try{
+      fetch('https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=1&safeSearch=none&q='+encodeURIComponent(qq)+'&key='+encodeURIComponent(k))
+      .then(function(r){return r.json()})
+      .then(function(j){
+        if(done)return;done=true;clearTimeout(tm);
+        if(j&&j.error){viaSearch(j.error.code===403?'YouTube API-এর আজকের সীমা শেষ বা কী ঠিক নেই।':'API-তে সমস্যা।');return}
+        var it=j&&j.items&&j.items[0];
+        if(!it||!it.id||!it.id.videoId){ytReply('দুঃখিত, "'+qq+'" নামে কোনো গান খুঁজে পাইনি। নামটা আবার বলুন।');return}
+        var title=(it.snippet&&it.snippet.title||qq).replace(/&amp;/g,'&').replace(/&#39;/g,"'").replace(/&quot;/g,'"');
+        ytReply('পেয়েছি: '+title+'। চালাচ্ছি।',window.AndroidTTS?null:{n:'YouTube',u:ytIntent(it.id.videoId,su),direct:true,lbl:'▶ '+title});
+        setTimeout(function(){goUrl(ytIntent(it.id.videoId,su))},1500);
+      })
+      .catch(function(){if(done)return;done=true;clearTimeout(tm);viaSearch('ইন্টারনেটে সমস্যা।')});
+    }catch(e){if(!done){done=true;clearTimeout(tm);viaSearch('')}}
+  }
+  function musicCmd(q,s){
+    if(!/youtube|you tube|ইউটিউব|ইউ টিউব|ইউটুব/.test(s))return null;
+    if(!/গান|song|music|মিউজিক|বাজাও|বাজিয়ে|বাজান|চালাও|চালিয়ে|চালান|শোনাও|শুনিয়ে|শুনাও|প্লে|play|সার্চ|search|ভিডিও|video|নাটক|খুঁজ|find|দেখাও|দেখতে|listen|শুনতে/.test(s))return null;
+    var qq=q.replace(/you ?tube|ইউ ?টিউব(?:-এ|ে|ের|ও)?|ইউটুব(?:ে)?|ঢুকে|ঢুকো|চালু করে দাও|চালু করে দিন|চালু করো|চালু কর|চালু|বাজিয়ে দাও|বাজিয়ে দিন|বাজাও|বাজান|চালিয়ে দাও|চালিয়ে দিন|চালাও|চালান|শুনিয়ে দাও|শুনাও|শোনাও|শুনতে চাই|শুনব|প্লে করো|প্লে কর|প্লে|play|please|can you|could you|i want to listen to|i want to hear|listen to|search for|search|find|খোলো|খুলো|ওপেন করো|ওপেন|দাও|দিন|করে|করো|কর/gi,' ').replace(/\b(?:on|in|from|at|the|a|to|for|me|song|video)\b/gi,' ').replace(/(?:^|\s)(?:এ|তে|-এ|টা|টি|গানটা|গানটি)(?=\s|$)/g,' ').replace(/\s+/g,' ').trim();
+    if(qq.split(/\s+/).length>9||q.split(/\s+/).length>18)return null;
+    if(!qq||/^(গান|song|music|মিউজিক|ভিডিও|video)$/i.test(qq)){
+      return{t:'কোন গান চালাব বস? গানের নাম বলুন। যেমন: ইউটিউবে আমার সোনার বাংলা চালাও।'};
+    }
+    if(ytKey()&&window.AndroidTTS){setTimeout(function(){ytApiPlay(qq)},50);return{t:'"'+qq+'" খুঁজছি...'}}
+    var iu=ytSearchIntent(qq);
     setTimeout(function(){goUrl(iu)},1200);
     return{t:'YouTube-এ "'+qq+'" চালাচ্ছি...',app:window.AndroidTTS?null:{n:'YouTube',u:iu,direct:true,lbl:'▶ YouTube-এ "'+qq+'" চালান'}};
   }
@@ -608,10 +640,11 @@ if(!window.Android){
   function pSoul(){open('<h2>SOUL</h2><p>Personality of your assistant.</p><div class="bar2"><input id="si" value="'+esc(soul)+'"><button id="ss">SAVE</button></div>',function(){$('ss').onclick=function(){soul=$('si').value;save('ar_soul',soul);toast('Soul saved');close()}})}
   function pSetting(){
     var A=window.Android;
-    open('<h2>SETTINGS</h2><p>Assistant name</p><div class="bar2"><input id="ni" value="'+esc(name)+'"><button id="ns">SAVE</button></div>'+(A?'<p>Gemini API key</p><div class="bar2"><input id="ki" type="password" placeholder="'+((A.hasGemini?A.hasGemini():A.hasKey())?'saved (paste to replace)':'paste key here')+'" autocomplete="off"><button id="ks">SAVE</button></div><p>Groq API key (backup)</p><div class="bar2"><input id="gi" type="password" placeholder="'+((A.hasGroq&&A.hasGroq())?'saved (paste to replace)':'paste Groq key here')+'" autocomplete="off"><button id="gs">SAVE</button></div><p>Model</p><div class="bar2"><input id="mi" value="'+esc(A.getModel())+'"><button id="ms">SAVE</button></div><p>Barge-in: AI কথা বলার সময় আপনি কথা বললে থামবে</p><div class="bar2"><input id="bgv" value="'+(bargeOn()?'ON (চালু)':'OFF (বন্ধ)')+'" readonly><button id="bgb">SWITCH</button></div><p>"বস" শব্দের উচ্চারণ (শুনে যেটা ঠিক লাগে বেছে নিন)</p><div class="bar2"><input id="bwv" value="'+bossWord()+'" readonly><button id="bwb">SWITCH</button></div><p>ভাসমান বোতাম (ইউটিউব, ফেসবুক, যেকোনো অ্যাপের ওপর থেকে কথা বলতে)</p><div class="bar2"><input id="fbv" value="'+(bubbleState()?'চালু আছে ✓':'বন্ধ')+'" readonly><button id="fbb">চালু করুন</button></div><p>ভাসমান বোতাম চালু না হলে: প্রথমে এখানে চাপুন, তারপর Accessibility-তে Archer AI চালু করুন</p><div class="bar2"><button id="fbi" style="width:100%">অ্যাপের তথ্য (Allow restricted settings)</button></div><p>লাইভ কথা (Archer কথা বলার সময়ও শোনে, কথা কেটে বলতে পারেন; ইয়ারফোন ভালো)</p><div class="bar2"><input id="lvv" value="'+(liveOn()?'ON (চালু)':'OFF (বন্ধ)')+'" readonly><button id="lvb">SWITCH</button></div><p>পেছনে শোনা (ইউটিউব/ফেসবুকের ভেতরেও শোনে, কিন্তু ধীর ও কম নির্ভুল)</p><div class="bar2"><input id="bmv" value="'+(bgModeOn()?'ON (চালু)':'OFF (বন্ধ - দ্রুত শোনা)')+'" readonly><button id="bmb">SWITCH</button></div><p>মাইক সংবেদনশীলতা (আস্তে বললেও শুনবে)</p><div class="bar2"><input id="snv" value="'+sensName(sensV())+'" readonly><button id="snb">SWITCH</button></div><p>কণ্ঠ (Voice)</p><div class="bar2"><input id="vcv" value="'+(voiceF()?'মেয়ে (Girl)':'ছেলে (Boy)')+'" readonly><button id="vcb">SWITCH</button></div>':'<p style="color:var(--dim)">AI brain: demo mode in the browser. Use the Android app for real AI.</p>'),function(){
+    open('<h2>SETTINGS</h2><p>Assistant name</p><div class="bar2"><input id="ni" value="'+esc(name)+'"><button id="ns">SAVE</button></div>'+(A?'<p>Gemini API key</p><div class="bar2"><input id="ki" type="password" placeholder="'+((A.hasGemini?A.hasGemini():A.hasKey())?'saved (paste to replace)':'paste key here')+'" autocomplete="off"><button id="ks">SAVE</button></div><p>Groq API key (backup)</p><div class="bar2"><input id="gi" type="password" placeholder="'+((A.hasGroq&&A.hasGroq())?'saved (paste to replace)':'paste Groq key here')+'" autocomplete="off"><button id="gs">SAVE</button></div><p>YouTube API key (ঐচ্ছিক — দিলে নির্দিষ্ট গান খুঁজে সরাসরি চালাবে)</p><div class="bar2"><input id="yi" type="password" placeholder="'+(ytKey()?'saved (paste to replace)':'paste YouTube key here')+'" autocomplete="off"><button id="ys">SAVE</button></div><p>Model</p><div class="bar2"><input id="mi" value="'+esc(A.getModel())+'"><button id="ms">SAVE</button></div><p>Barge-in: AI কথা বলার সময় আপনি কথা বললে থামবে</p><div class="bar2"><input id="bgv" value="'+(bargeOn()?'ON (চালু)':'OFF (বন্ধ)')+'" readonly><button id="bgb">SWITCH</button></div><p>"বস" শব্দের উচ্চারণ (শুনে যেটা ঠিক লাগে বেছে নিন)</p><div class="bar2"><input id="bwv" value="'+bossWord()+'" readonly><button id="bwb">SWITCH</button></div><p>ভাসমান বোতাম (ইউটিউব, ফেসবুক, যেকোনো অ্যাপের ওপর থেকে কথা বলতে)</p><div class="bar2"><input id="fbv" value="'+(bubbleState()?'চালু আছে ✓':'বন্ধ')+'" readonly><button id="fbb">চালু করুন</button></div><p>ভাসমান বোতাম চালু না হলে: প্রথমে এখানে চাপুন, তারপর Accessibility-তে Archer AI চালু করুন</p><div class="bar2"><button id="fbi" style="width:100%">অ্যাপের তথ্য (Allow restricted settings)</button></div><p>লাইভ কথা (Archer কথা বলার সময়ও শোনে, কথা কেটে বলতে পারেন; ইয়ারফোন ভালো)</p><div class="bar2"><input id="lvv" value="'+(liveOn()?'ON (চালু)':'OFF (বন্ধ)')+'" readonly><button id="lvb">SWITCH</button></div><p>পেছনে শোনা (ইউটিউব/ফেসবুকের ভেতরেও শোনে, কিন্তু ধীর ও কম নির্ভুল)</p><div class="bar2"><input id="bmv" value="'+(bgModeOn()?'ON (চালু)':'OFF (বন্ধ - দ্রুত শোনা)')+'" readonly><button id="bmb">SWITCH</button></div><p>মাইক সংবেদনশীলতা (আস্তে বললেও শুনবে)</p><div class="bar2"><input id="snv" value="'+sensName(sensV())+'" readonly><button id="snb">SWITCH</button></div><p>কণ্ঠ (Voice)</p><div class="bar2"><input id="vcv" value="'+(voiceF()?'মেয়ে (Girl)':'ছেলে (Boy)')+'" readonly><button id="vcb">SWITCH</button></div>':'<p style="color:var(--dim)">AI brain: demo mode in the browser. Use the Android app for real AI.</p>'),function(){
       $('ns').onclick=function(){name=$('ni').value||'Archer AI';save('ar_name2',name);toast('Saved');close()};
       if(A){
         $('ks').onclick=function(){var v=$('ki').value.trim();if(v){A.setKey(v);toast('Key saved');close()}};
+        $('ys').onclick=function(){var v=$('yi').value.trim();if(v){try{localStorage.setItem('ar_ytkey',v)}catch(e){}toast('YouTube key saved');close()}};
         $('gs').onclick=function(){var v=$('gi').value.trim();if(v){A.setGroq&&A.setGroq(v);window.__gemSkip=0;toast('Groq key saved');close()}};
         $('ms').onclick=function(){A.setModel($('mi').value.trim());toast('Saved');close()};
         $('snb').onclick=function(){var v=sensV(),n=v>=1?0.7:(v>=0.65?0.45:1.0);try{localStorage.setItem('ar_sens',String(n))}catch(e){}applySens();$('snv').value=sensName(n);toast('মাইক: '+sensName(n))};
