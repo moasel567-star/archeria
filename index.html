@@ -91,7 +91,7 @@ ul.tasks li.done{color:var(--dim);text-decoration:line-through}
 </head><body><div class="app">
   <div class="hdr">
     <span></span>
-    <h1><svg class="logo" viewBox="0 0 24 24"><path d="M12 2 3 21h18z" fill="#1fe86b"/><rect x="8" y="12.5" width="8" height="4" rx="2" fill="#031006"/></svg>ARCHER AI<small>v58</small></h1>
+    <h1><svg class="logo" viewBox="0 0 24 24"><path d="M12 2 3 21h18z" fill="#1fe86b"/><rect x="8" y="12.5" width="8" height="4" rx="2" fill="#031006"/></svg>ARCHER AI<small>v59</small></h1>
     <button class="sq" id="sq" aria-label="Settings">&#9881;</button>
   </div>
   <div class="row3">
@@ -468,6 +468,12 @@ if(!window.Android){
       .catch(function(){if(done)return;done=true;clearTimeout(tm);viaSearch('ইন্টারনেটে সমস্যা।')});
     }catch(e){if(!done){done=true;clearTimeout(tm);viaSearch('')}}
   }
+  window.onYtFound=function(q,id,title){
+    var su='https://www.youtube.com/results?search_query='+encodeURIComponent(q);
+    if(!id){ytReply('সরাসরি গান পাইনি। YouTube-এর সার্চে "'+q+'" খুলছি।');setTimeout(function(){goUrl(ytSearchIntent(q))},1500);return}
+    ytReply('পেয়েছি: '+(title||q)+'। চালাচ্ছি।');
+    setTimeout(function(){goUrl(ytIntent(id,su))},1500);
+  };
   function musicCmd(q,s){
     if(!/youtube|you tube|ইউটিউব|ইউ টিউব|ইউটুব/.test(s))return null;
     if(!/গান|song|music|মিউজিক|বাজাও|বাজিয়ে|বাজান|চালাও|চালিয়ে|চালান|শোনাও|শুনিয়ে|শুনাও|প্লে|play|সার্চ|search|ভিডিও|video|নাটক|খুঁজ|find|দেখাও|দেখতে|listen|শুনতে/.test(s))return null;
@@ -477,6 +483,7 @@ if(!window.Android){
       return{t:'কোন গান চালাব বস? গানের নাম বলুন। যেমন: ইউটিউবে আমার সোনার বাংলা চালাও।'};
     }
     if(ytKey()&&window.AndroidTTS){setTimeout(function(){ytApiPlay(qq)},50);return{t:'"'+qq+'" খুঁজছি...'}}
+    if(window.AndroidTTS&&AndroidTTS.hasYtFind&&AndroidTTS.hasYtFind()){setTimeout(function(){try{AndroidTTS.ytFind(qq)}catch(e){goUrl(ytSearchIntent(qq))}},50);return{t:'"'+qq+'" খুঁজছি...'}}
     var iu=ytSearchIntent(qq);
     setTimeout(function(){goUrl(iu)},1200);
     return{t:'YouTube-এ "'+qq+'" চালাচ্ছি...',app:window.AndroidTTS?null:{n:'YouTube',u:iu,direct:true,lbl:'▶ YouTube-এ "'+qq+'" চালান'}};
