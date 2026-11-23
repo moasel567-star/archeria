@@ -48,6 +48,7 @@ button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(-
 .stop{font:700 calc(var(--u)*11) var(--display);letter-spacing:.06em;color:var(--white);border:calc(var(--u)*2.5) solid var(--red);background:rgba(255,77,94,.1);border-radius:999px;width:calc(var(--u)*98);height:calc(var(--u)*40);padding:0;cursor:pointer;display:flex;gap:calc(var(--u)*9);align-items:center;justify-content:center}
 .stop::before{content:"";width:calc(var(--u)*8);height:calc(var(--u)*8);background:var(--white)}
 .stop.off{border-color:var(--edge)}
+.lvbtn{width:auto!important;padding:0 calc(var(--u)*11)!important;font:700 calc(var(--u)*11) var(--display)!important;letter-spacing:.06em;background:#7c3aed!important;border-radius:999px!important;height:calc(var(--u)*40)!important}.lvbtn.on{background:#e11d48!important}
 .spk{width:calc(var(--u)*36);height:calc(var(--u)*36);border-radius:calc(var(--u)*9);border:0;background:#17a2b8;color:#fff;cursor:pointer;font-size:calc(var(--u)*13);padding:0;display:grid;place-items:center}
 .two{display:grid;grid-template-columns:206fr 219fr;gap:calc(var(--u)*20);align-items:start;margin-top:calc(var(--u)*21)}
 .two>*{min-width:0}
@@ -91,7 +92,7 @@ ul.tasks li.done{color:var(--dim);text-decoration:line-through}
 </head><body><div class="app">
   <div class="hdr">
     <span></span>
-    <h1><svg class="logo" viewBox="0 0 24 24"><path d="M12 2 3 21h18z" fill="#1fe86b"/><rect x="8" y="12.5" width="8" height="4" rx="2" fill="#031006"/></svg>ARCHER AI<small>v59</small></h1>
+    <h1><svg class="logo" viewBox="0 0 24 24"><path d="M12 2 3 21h18z" fill="#1fe86b"/><rect x="8" y="12.5" width="8" height="4" rx="2" fill="#031006"/></svg>ARCHER AI<small>v61</small></h1>
     <button class="sq" id="sq" aria-label="Settings">&#9881;</button>
   </div>
   <div class="row3">
@@ -115,7 +116,7 @@ ul.tasks li.done{color:var(--dim);text-decoration:line-through}
   </div>
   <div class="ctrl">
     <button class="stop" id="stop">STOP</button>
-    <button class="spk" id="vol" aria-label="Voice">&#9654;</button>
+    <button class="spk" id="vol" aria-label="Voice">&#9654;</button><button class="spk lvbtn" id="lvlive" aria-label="Live">LIVE</button>
   </div>
   <div class="two">
     <div class="hcol">
@@ -570,7 +571,11 @@ if(!window.Android){
   window.onAI=function(id,out,err){
     try{if(window.__lastInfo&&!err)toast(window.__lastInfo)}catch(e){}
     var isAud=audioIds[id];delete audioIds[id];
-    if(liveSR()&&!isAud&&id!==nid)return;
+    if(liveSR()&&!isAud&&id!==nid){
+      window.__stale={out:out,err:err};clearTimeout(window.__stT);
+      window.__stT=setTimeout(function(){var st=window.__stale;window.__stale=null;if(st)window.onAI(nid,st.out,st.err)},6000);
+      return}
+    if(!isAud){window.__stale=null;clearTimeout(window.__stT)}
     $('spk').innerHTML=talk?'&bull; LISTENING &bull;':'&bull; READY &bull;';
     if(err){say('ai','সমস্যা হয়েছে: '+String(err).slice(0,180));relisten(1500);return}
     if(isAud){
@@ -599,6 +604,17 @@ if(!window.Android){
       if(vad&&(vad.on||vad.native)){vad.busy=false}else{Android.listen()}
     },ms);
   }
+  setInterval(function(){
+    try{
+      var th=/THINKING/.test($('spk').innerText||'');
+      if(!th){window.__thk=0;return}
+      if(!window.__thk){window.__thk=Date.now();return}
+      if(Date.now()-window.__thk>(window.__gr?80000:30000)){
+        window.__thk=0;$('spk').innerHTML=talk?'&bull; LISTENING &bull;':'&bull; READY &bull;';
+        var m='উত্তর আসেনি বস, আবার বলুন।';say('ai',m);speak(m);relisten(1200);
+      }
+    }catch(e){}
+  },3000);
   window.onSpoke=function(){window.__aiSpeaking=false;window.__lastSpokeT=Date.now();relisten(700)};
   function echoLike(t){
     try{
@@ -619,7 +635,11 @@ if(!window.Android){
       try{if(window.__aiSpeaking)AndroidTTS.speak(' ')}catch(e){}
       window.__aiSpeaking=false;
     }
-    if(t){$('spk').innerHTML='&bull; THINKING &bull;';ask(t);return}
+    if(t){
+      var nt=t.trim().replace(/[\s।.,!?]+/g,' ');
+      if(window.__lastHeardT===nt&&Date.now()-(window.__lastHeardAt||0)<12000){if(talk)relisten(300);return}
+      window.__lastHeardT=nt;window.__lastHeardAt=Date.now();
+      $('spk').innerHTML='&bull; THINKING &bull;';ask(t);return}
     if((err==='not-allowed'||err==='service-not-allowed')&&talk&&window.AndroidTTS&&AndroidTTS.srOk){
       var okp=false;try{okp=!!AndroidTTS.srOk()}catch(e){}
       window.__naN=(Date.now()-(window.__naT||0)<20000)?(window.__naN||0)+1:1;window.__naT=Date.now();
@@ -645,6 +665,136 @@ if(!window.Android){
   function pMemory(){open('<h2>MEMORY</h2>'+(mem.length?'<ul>'+mem.map(function(m){return'<li>'+esc(m)+'</li>'}).join('')+'</ul>':'<p>Nothing saved yet. In CHAT say "remember my favorite color is blue".</p>')+'<button class="x" id="clr">Clear memory</button>',function(){$('clr').onclick=function(){mem=[];save('ar_mem',mem);pMemory()}})}
   function pChat(){open('<h2>CHAT</h2><div class="bar2"><input id="ci" placeholder="Type here / এখানে লিখুন" autocomplete="off"><button id="cs">SEND</button></div><p style="color:var(--dim)">Try: open youtube, open tiktok, remember I like cricket, task buy milk</p>',function(){var go=function(){var v=$('ci').value.trim();$('ci').value='';if(v){close();ask(v)}};$('cs').onclick=go;$('ci').onkeydown=function(e){if(e.key==='Enter')go()};setTimeout(function(){$('ci').focus()},50)})}
   function pSoul(){open('<h2>SOUL</h2><p>Personality of your assistant.</p><div class="bar2"><input id="si" value="'+esc(soul)+'"><button id="ss">SAVE</button></div>',function(){$('ss').onclick=function(){soul=$('si').value;save('ar_soul',soul);toast('Soul saved');close()}})}
+
+  /* ---------- LIVE: Gemini Live streaming voice call (separate button; old modes untouched) ---------- */
+  var GL={on:false,ws:null,ac:null,stream:null,node:null,src:null,nextT:0,srcs:[],tryI:0,combos:[],ready:false,inT:'',outT:'',readyAt:0,rapid:0,re:0};
+  function glKey(){try{return localStorage.getItem('ar_key')||''}catch(e){return ''}}
+  function glB64(u8){var s='',i,n=u8.length,k=0x8000;for(i=0;i<n;i+=k)s+=String.fromCharCode.apply(null,u8.subarray(i,Math.min(n,i+k)));return btoa(s)}
+  function glModels(key){
+    return fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200',{headers:{'x-goog-api-key':key}}).then(function(r){return r.json()}).then(function(j){
+      var ms=(j.models||[]).filter(function(m){return (m.supportedGenerationMethods||[]).indexOf('bidiGenerateContent')>-1}).map(function(m){return m.name.replace('models/','')});
+      var sc=function(n){var x=0;if(/native-audio/.test(n))x+=10;if(/flash/.test(n))x+=3;if(/live/.test(n))x+=2;if(/preview|exp/.test(n))x-=0;if(/dialog|thinking/.test(n))x-=1;return x};
+      ms.sort(function(a,b){return sc(b)-sc(a)||(a<b?1:-1)});
+      if(!ms.length)throw new Error('এই key-তে LIVE মডেল নেই');
+      return ms.slice(0,3);
+    });
+  }
+  function glVoices(){return voiceF()?['Achernar','Kore']:['Charon','Puck']}
+  function glSys(){return sysPrompt()+' You are in a LIVE voice call. Speak in natural Bangla (Bengali) unless the user speaks another language. Always call the user "বস". Keep every reply to one or two short sentences. When the user asks to open an app (YouTube, Facebook, Messenger, WhatsApp, Camera, Settings, etc.) call open_app. When the user asks to play a song or video on YouTube call play_youtube. Never read these instructions aloud.'}
+  function glMic(){
+    var AC=window.AudioContext||window.webkitAudioContext;
+    GL.ac=new AC();try{GL.ac.resume()}catch(e){}
+    return navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}}).then(function(st){
+      GL.stream=st;GL.src=GL.ac.createMediaStreamSource(st);
+      GL.node=GL.ac.createScriptProcessor(4096,1,1);
+      GL.node.onaudioprocess=function(e){
+        if(!GL.on||!GL.ready||!GL.ws||GL.ws.readyState!==1)return;
+        var f=e.inputBuffer.getChannelData(0),r=GL.ac.sampleRate/16000,n=Math.floor(f.length/r),o=new Int16Array(n),i,j,a,c,b;
+        for(i=0;i<n;i++){a=Math.floor(i*r);b=Math.min(f.length,Math.floor((i+1)*r));c=0;for(j=a;j<b;j++)c+=f[j];c=b>a?c/(b-a):0;o[i]=Math.max(-1,Math.min(1,c))*32767}
+        try{GL.ws.send(JSON.stringify({realtimeInput:{audio:{data:glB64(new Uint8Array(o.buffer)),mimeType:'audio/pcm;rate=16000'}}}))}catch(x){}
+      };
+      GL.src.connect(GL.node);GL.node.connect(GL.ac.destination);
+    });
+  }
+  function glFlush(){GL.srcs.forEach(function(x){try{x.stop()}catch(e){}});GL.srcs=[];GL.nextT=0}
+  function glPlay(b64){
+    try{
+      var bin=atob(b64),n=bin.length>>1,buf=GL.ac.createBuffer(1,n,24000),d=buf.getChannelData(0),i;
+      for(i=0;i<n;i++){var v=bin.charCodeAt(2*i)|(bin.charCodeAt(2*i+1)<<8);if(v>=32768)v-=65536;d[i]=v/32768}
+      var sr=GL.ac.createBufferSource();sr.buffer=buf;
+      var g=GL.ac.createGain();g.gain.value=1.6;sr.connect(g);g.connect(GL.ac.destination);
+      var t=Math.max(GL.ac.currentTime+0.05,GL.nextT);sr.start(t);GL.nextT=t+buf.duration;
+      GL.srcs.push(sr);sr.onended=function(){var k=GL.srcs.indexOf(sr);if(k>-1)GL.srcs.splice(k,1)};
+    }catch(e){}
+  }
+  function glRun(name,args){
+    try{
+      if(name==='open_app'){var r=reply(String(args&&args.name||'')+' খোলো');return r&&r.t?r.t:'done'}
+      if(name==='play_youtube'){var r2=reply('ইউটিউবে '+String(args&&args.song||'')+' চালাও');return r2&&r2.t?r2.t:'done'}
+    }catch(e){}
+    return 'failed';
+  }
+  function glMsg(txt){
+    var j;try{j=JSON.parse(txt)}catch(e){return}
+    if(j.setupComplete){GL.ready=true;GL.readyAt=Date.now();$('spk').innerHTML='&bull; LIVE: বলুন &bull;';return}
+    var sc=j.serverContent;
+    if(sc){
+      if(sc.interrupted)glFlush();
+      if(sc.modelTurn&&sc.modelTurn.parts)sc.modelTurn.parts.forEach(function(p){if(p.inlineData&&p.inlineData.data)glPlay(p.inlineData.data)});
+      if(sc.inputTranscription&&sc.inputTranscription.text)GL.inT+=sc.inputTranscription.text;
+      if(sc.outputTranscription&&sc.outputTranscription.text)GL.outT+=sc.outputTranscription.text;
+      if(sc.turnComplete||sc.generationComplete){
+        if(GL.inT.trim()){say('me',GL.inT.trim())}if(GL.outT.trim()){say('ai',GL.outT.trim())}
+        GL.inT='';GL.outT='';
+      }
+    }
+    var tc=j.toolCall;
+    if(tc&&tc.functionCalls){
+      var rs=tc.functionCalls.map(function(f){return{id:f.id,name:f.name,response:{result:glRun(f.name,f.args)}}});
+      try{GL.ws.send(JSON.stringify({toolResponse:{functionResponses:rs}}))}catch(e){}
+    }
+  }
+  function glConnect(){
+    if(!GL.on)return;
+    var c=GL.combos[GL.tryI];
+    if(!c){toast('LIVE মডেল চালু হয়নি। পুরোনো পদ্ধতিতে কথা বলুন।');glStop();return}
+    var key=glKey();
+    var ws=new WebSocket('wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key='+encodeURIComponent(key));
+    GL.ws=ws;GL.ready=false;
+    ws.onopen=function(){
+      ws.send(JSON.stringify({setup:{
+        model:'models/'+c[0],
+        generationConfig:{responseModalities:['AUDIO'],speechConfig:{voiceConfig:{prebuiltVoiceConfig:{voiceName:c[1]}}}},
+        systemInstruction:{parts:[{text:glSys()}]},
+        tools:[{functionDeclarations:[
+          {name:'open_app',description:'Open an app on the phone by its name',parameters:{type:'OBJECT',properties:{name:{type:'STRING',description:'App name, e.g. YouTube, Facebook'}},required:['name']}},
+          {name:'play_youtube',description:'Search and play a song or video on YouTube',parameters:{type:'OBJECT',properties:{song:{type:'STRING',description:'Song or video name'}},required:['song']}}
+        ]}],
+        inputAudioTranscription:{},outputAudioTranscription:{}
+      }}));
+    };
+    ws.onmessage=function(ev){if(GL.ws!==ws)return;if(typeof ev.data==='string')glMsg(ev.data);else if(ev.data&&ev.data.text)ev.data.text().then(glMsg);else try{glMsg(new TextDecoder().decode(ev.data))}catch(e){}};
+    ws.onerror=function(){};
+    ws.onclose=function(ev){
+      if(!GL.on||GL.ws!==ws)return;
+      if(!GL.ready){GL.tryI++;if(GL.tryI<GL.combos.length){setTimeout(glConnect,300)}else{toast('LIVE সংযোগ হয়নি'+(ev&&ev.reason?': '+String(ev.reason).slice(0,120):'')+'। পুরোনো পদ্ধতিতে কথা বলুন।');glStop()}return}
+      if(Date.now()-GL.readyAt<6000)GL.rapid++;else GL.rapid=0;
+      if(GL.rapid>3){toast('LIVE বারবার কেটে যাচ্ছে'+(ev&&ev.reason?': '+String(ev.reason).slice(0,100):''));glStop();return}
+      $('spk').innerHTML='&bull; LIVE: আবার জুড়ছি &bull;';setTimeout(glConnect,300);
+    };
+  }
+  function glStop(){
+    var was=GL.on;GL.on=false;GL.ready=false;
+    try{if(GL.ws){var w=GL.ws;GL.ws=null;w.close()}}catch(e){}
+    glFlush();
+    try{if(GL.node){GL.node.onaudioprocess=null;GL.node.disconnect()}}catch(e){}
+    try{if(GL.src)GL.src.disconnect()}catch(e){}
+    try{if(GL.stream)GL.stream.getTracks().forEach(function(t){t.stop()})}catch(e){}
+    try{if(GL.ac)GL.ac.close()}catch(e){}
+    GL.node=null;GL.src=null;GL.stream=null;GL.ac=null;GL.inT='';GL.outT='';GL.tryI=0;GL.rapid=0;
+    $('lvlive').classList.remove('on');
+    if(was)$('spk').innerHTML='&bull; READY &bull;';
+  }
+  function glStart(){
+    if(GL.on){glStop();return}
+    var key=glKey();
+    if(!key){toast('আগে Settings-এ Gemini key বসান');return}
+    if(talk){try{$('stop').click()}catch(e){}}
+    GL.on=true;GL.tryI=0;GL.rapid=0;
+    $('lvlive').classList.add('on');$('spk').innerHTML='&bull; LIVE: সংযোগ হচ্ছে &bull;';
+    toast('LIVE চালু। ইয়ারফোন লাগালে ভালো হবে।');
+    try{if(window.AndroidTTS&&AndroidTTS.boostVolume)AndroidTTS.boostVolume()}catch(e){}
+    glModels(key).then(function(ms){
+      GL.combos=[];var vs=glVoices();ms.forEach(function(m){vs.forEach(function(v){GL.combos.push([m,v])})});
+      return glMic();
+    }).then(function(){glConnect()}).catch(function(e){
+      var m=(e&&e.name==='NotAllowedError')?'মাইকের অনুমতি দিন (Allow)':(e&&e.message)||String(e);
+      toast('LIVE শুরু হয়নি: '+m);glStop();
+    });
+  }
+  $('lvlive').onclick=glStart;
+  $('stop').addEventListener('click',function(){if(GL.on)glStop()});
+
   function pSetting(){
     var A=window.Android;
     open('<h2>SETTINGS</h2><p>Assistant name</p><div class="bar2"><input id="ni" value="'+esc(name)+'"><button id="ns">SAVE</button></div>'+(A?'<p>Gemini API key</p><div class="bar2"><input id="ki" type="password" placeholder="'+((A.hasGemini?A.hasGemini():A.hasKey())?'saved (paste to replace)':'paste key here')+'" autocomplete="off"><button id="ks">SAVE</button></div><p>Groq API key (backup)</p><div class="bar2"><input id="gi" type="password" placeholder="'+((A.hasGroq&&A.hasGroq())?'saved (paste to replace)':'paste Groq key here')+'" autocomplete="off"><button id="gs">SAVE</button></div><p>YouTube API key (ঐচ্ছিক — দিলে নির্দিষ্ট গান খুঁজে সরাসরি চালাবে)</p><div class="bar2"><input id="yi" type="password" placeholder="'+(ytKey()?'saved (paste to replace)':'paste YouTube key here')+'" autocomplete="off"><button id="ys">SAVE</button></div><p>Model</p><div class="bar2"><input id="mi" value="'+esc(A.getModel())+'"><button id="ms">SAVE</button></div><p>Barge-in: AI কথা বলার সময় আপনি কথা বললে থামবে</p><div class="bar2"><input id="bgv" value="'+(bargeOn()?'ON (চালু)':'OFF (বন্ধ)')+'" readonly><button id="bgb">SWITCH</button></div><p>"বস" শব্দের উচ্চারণ (শুনে যেটা ঠিক লাগে বেছে নিন)</p><div class="bar2"><input id="bwv" value="'+bossWord()+'" readonly><button id="bwb">SWITCH</button></div><p>ভাসমান বোতাম (ইউটিউব, ফেসবুক, যেকোনো অ্যাপের ওপর থেকে কথা বলতে)</p><div class="bar2"><input id="fbv" value="'+(bubbleState()?'চালু আছে ✓':'বন্ধ')+'" readonly><button id="fbb">চালু করুন</button></div><p>ভাসমান বোতাম চালু না হলে: প্রথমে এখানে চাপুন, তারপর Accessibility-তে Archer AI চালু করুন</p><div class="bar2"><button id="fbi" style="width:100%">অ্যাপের তথ্য (Allow restricted settings)</button></div><p>লাইভ কথা (Archer কথা বলার সময়ও শোনে, কথা কেটে বলতে পারেন; ইয়ারফোন ভালো)</p><div class="bar2"><input id="lvv" value="'+(liveOn()?'ON (চালু)':'OFF (বন্ধ)')+'" readonly><button id="lvb">SWITCH</button></div><p>পেছনে শোনা (ইউটিউব/ফেসবুকের ভেতরেও শোনে, কিন্তু ধীর ও কম নির্ভুল)</p><div class="bar2"><input id="bmv" value="'+(bgModeOn()?'ON (চালু)':'OFF (বন্ধ - দ্রুত শোনা)')+'" readonly><button id="bmb">SWITCH</button></div><p>মাইক সংবেদনশীলতা (আস্তে বললেও শুনবে)</p><div class="bar2"><input id="snv" value="'+sensName(sensV())+'" readonly><button id="snb">SWITCH</button></div><p>কণ্ঠ (Voice)</p><div class="bar2"><input id="vcv" value="'+(voiceF()?'মেয়ে (Girl)':'ছেলে (Boy)')+'" readonly><button id="vcb">SWITCH</button></div>':'<p style="color:var(--dim)">AI brain: demo mode in the browser. Use the Android app for real AI.</p>'),function(){
