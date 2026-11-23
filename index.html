@@ -92,7 +92,7 @@ ul.tasks li.done{color:var(--dim);text-decoration:line-through}
 </head><body><div class="app">
   <div class="hdr">
     <span></span>
-    <h1><svg class="logo" viewBox="0 0 24 24"><path d="M12 2 3 21h18z" fill="#1fe86b"/><rect x="8" y="12.5" width="8" height="4" rx="2" fill="#031006"/></svg>ARCHER AI<small>v62</small></h1>
+    <h1><svg class="logo" viewBox="0 0 24 24"><path d="M12 2 3 21h18z" fill="#1fe86b"/><rect x="8" y="12.5" width="8" height="4" rx="2" fill="#031006"/></svg>ARCHER AI<small>v64</small></h1>
     <button class="sq" id="sq" aria-label="Settings">&#9881;</button>
   </div>
   <div class="row3">
@@ -116,7 +116,7 @@ ul.tasks li.done{color:var(--dim);text-decoration:line-through}
   </div>
   <div class="ctrl">
     <button class="stop" id="stop">STOP</button>
-    <button class="spk" id="vol" aria-label="Voice">&#9654;</button><button class="spk lvbtn" id="lvlive" aria-label="Live">LIVE</button>
+    <button class="spk" id="vol" aria-label="Voice" style="display:none">&#9654;</button><button class="spk lvbtn" id="lvlive" aria-label="Live">LIVE</button>
   </div>
   <div class="two">
     <div class="hcol">
@@ -696,6 +696,14 @@ if(!window.Android){
       GL.src.connect(GL.node);GL.node.connect(GL.ac.destination);
     });
   }
+  /* LIVE can see: send a camera picture to Gemini every second while camera is on */
+  setInterval(function(){
+    try{
+      if(!GL.on||!GL.ready||!GL.ws||GL.ws.readyState!==1||!camStream)return;
+      var f=camFrame();if(!f)return;
+      GL.ws.send(JSON.stringify({realtimeInput:{video:{data:f,mimeType:'image/jpeg'}}}));
+    }catch(e){}
+  },1000);
   function glFlush(){GL.srcs.forEach(function(x){try{x.stop()}catch(e){}});GL.srcs=[];GL.nextT=0}
   function glPlay(b64){
     try{
@@ -756,7 +764,7 @@ if(!window.Android){
       }};
       if(c[2]){
         // faster turn-taking: answer as soon as you stop talking, ignore small noises
-        setup.setup.realtimeInputConfig={automaticActivityDetection:{startOfSpeechSensitivity:'START_SENSITIVITY_LOW',endOfSpeechSensitivity:'END_SENSITIVITY_HIGH',prefixPaddingMs:100,silenceDurationMs:350}};
+        setup.setup.realtimeInputConfig={automaticActivityDetection:{startOfSpeechSensitivity:'START_SENSITIVITY_LOW',endOfSpeechSensitivity:'END_SENSITIVITY_HIGH',prefixPaddingMs:100,silenceDurationMs:280}};
         setup.setup.generationConfig.thinkingConfig={thinkingBudget:0};
       }
       ws.send(JSON.stringify(setup));
