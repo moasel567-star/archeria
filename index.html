@@ -92,7 +92,7 @@ ul.tasks li.done{color:var(--dim);text-decoration:line-through}
 </head><body><div class="app">
   <div class="hdr">
     <span></span>
-    <h1><svg class="logo" viewBox="0 0 24 24"><path d="M12 2 3 21h18z" fill="#1fe86b"/><rect x="8" y="12.5" width="8" height="4" rx="2" fill="#031006"/></svg>ARCHER AI<small>v61</small></h1>
+    <h1><svg class="logo" viewBox="0 0 24 24"><path d="M12 2 3 21h18z" fill="#1fe86b"/><rect x="8" y="12.5" width="8" height="4" rx="2" fill="#031006"/></svg>ARCHER AI<small>v62</small></h1>
     <button class="sq" id="sq" aria-label="Settings">&#9881;</button>
   </div>
   <div class="row3">
@@ -724,7 +724,9 @@ if(!window.Android){
       if(sc.inputTranscription&&sc.inputTranscription.text)GL.inT+=sc.inputTranscription.text;
       if(sc.outputTranscription&&sc.outputTranscription.text)GL.outT+=sc.outputTranscription.text;
       if(sc.turnComplete||sc.generationComplete){
-        if(GL.inT.trim()){say('me',GL.inT.trim())}if(GL.outT.trim()){say('ai',GL.outT.trim())}
+        var ui=GL.inT.replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim();
+        var okU=ui&&(/[\u0980-\u09FF]/.test(ui)||ui.split(' ').length>=3);
+        if(okU){say('me',ui)}if(GL.outT.trim()){say('ai',GL.outT.replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim())}
         GL.inT='';GL.outT='';
       }
     }
@@ -742,7 +744,7 @@ if(!window.Android){
     var ws=new WebSocket('wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key='+encodeURIComponent(key));
     GL.ws=ws;GL.ready=false;
     ws.onopen=function(){
-      ws.send(JSON.stringify({setup:{
+      var setup={setup:{
         model:'models/'+c[0],
         generationConfig:{responseModalities:['AUDIO'],speechConfig:{voiceConfig:{prebuiltVoiceConfig:{voiceName:c[1]}}}},
         systemInstruction:{parts:[{text:glSys()}]},
@@ -751,7 +753,13 @@ if(!window.Android){
           {name:'play_youtube',description:'Search and play a song or video on YouTube',parameters:{type:'OBJECT',properties:{song:{type:'STRING',description:'Song or video name'}},required:['song']}}
         ]}],
         inputAudioTranscription:{},outputAudioTranscription:{}
-      }}));
+      }};
+      if(c[2]){
+        // faster turn-taking: answer as soon as you stop talking, ignore small noises
+        setup.setup.realtimeInputConfig={automaticActivityDetection:{startOfSpeechSensitivity:'START_SENSITIVITY_LOW',endOfSpeechSensitivity:'END_SENSITIVITY_HIGH',prefixPaddingMs:100,silenceDurationMs:350}};
+        setup.setup.generationConfig.thinkingConfig={thinkingBudget:0};
+      }
+      ws.send(JSON.stringify(setup));
     };
     ws.onmessage=function(ev){if(GL.ws!==ws)return;if(typeof ev.data==='string')glMsg(ev.data);else if(ev.data&&ev.data.text)ev.data.text().then(glMsg);else try{glMsg(new TextDecoder().decode(ev.data))}catch(e){}};
     ws.onerror=function(){};
@@ -785,7 +793,7 @@ if(!window.Android){
     toast('LIVE চালু। ইয়ারফোন লাগালে ভালো হবে।');
     try{if(window.AndroidTTS&&AndroidTTS.boostVolume)AndroidTTS.boostVolume()}catch(e){}
     glModels(key).then(function(ms){
-      GL.combos=[];var vs=glVoices();ms.forEach(function(m){vs.forEach(function(v){GL.combos.push([m,v])})});
+      GL.combos=[];var vs=glVoices();ms.forEach(function(m){vs.forEach(function(v){GL.combos.push([m,v,true]);GL.combos.push([m,v,false])})});
       return glMic();
     }).then(function(){glConnect()}).catch(function(e){
       var m=(e&&e.name==='NotAllowedError')?'মাইকের অনুমতি দিন (Allow)':(e&&e.message)||String(e);
