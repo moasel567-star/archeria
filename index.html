@@ -92,7 +92,7 @@ ul.tasks li.done{color:var(--dim);text-decoration:line-through}
 </head><body><div class="app">
   <div class="hdr">
     <span></span>
-    <h1><svg class="logo" viewBox="0 0 24 24"><path d="M12 2 3 21h18z" fill="#1fe86b"/><rect x="8" y="12.5" width="8" height="4" rx="2" fill="#031006"/></svg>ARCHER AI<small>v65</small></h1>
+    <h1><svg class="logo" viewBox="0 0 24 24"><path d="M12 2 3 21h18z" fill="#1fe86b"/><rect x="8" y="12.5" width="8" height="4" rx="2" fill="#031006"/></svg>ARCHER AI<small>v66</small></h1>
     <button class="sq" id="sq" aria-label="Settings">&#9881;</button>
   </div>
   <div class="row3">
@@ -327,7 +327,7 @@ if(!window.Android){
             var settled=false,hp=null,t0=Date.now();
             function ok(v,who){if(!settled){settled=true;if(who)window.__lastInfo=who+' '+((Date.now()-t0)/1000).toFixed(1)+'s';res(v)}}
             function bad(e){if(!settled){settled=true;rej(e)}}
-            var tm=setTimeout(function(){if(settled)return;hp=groqRun();hp.catch(function(){});hp.then(function(v){ok(v,'Groq')})},aud?2200:2000);
+            var tm=setTimeout(function(){if(settled)return;hp=groqRun();hp.catch(function(){});hp.then(function(v){ok(v,'Groq')})},aud?1800:1500);
             run().then(function(v){clearTimeout(tm);ok(v)},function(e){
               clearTimeout(tm);
               if(/429|সীমা/.test(String(e&&e.message)))window.__gemSkip=Date.now()+600000;
@@ -710,7 +710,7 @@ if(!window.Android){
       var bin=atob(b64),n=bin.length>>1,buf=GL.ac.createBuffer(1,n,24000),d=buf.getChannelData(0),i;
       for(i=0;i<n;i++){var v=bin.charCodeAt(2*i)|(bin.charCodeAt(2*i+1)<<8);if(v>=32768)v-=65536;d[i]=v/32768}
       var sr=GL.ac.createBufferSource();sr.buffer=buf;
-      var g=GL.ac.createGain();g.gain.value=1.6;sr.connect(g);g.connect(GL.ac.destination);
+      if(!GL.comp||GL.compAc!==GL.ac){GL.comp=GL.ac.createDynamicsCompressor();GL.comp.threshold.value=-18;GL.comp.ratio.value=4;GL.comp.connect(GL.ac.destination);GL.compAc=GL.ac}var g=GL.ac.createGain();g.gain.value=3;sr.connect(g);g.connect(GL.comp);
       var t=Math.max(GL.ac.currentTime+0.05,GL.nextT);sr.start(t);GL.nextT=t+buf.duration;
       GL.srcs.push(sr);sr.onended=function(){var k=GL.srcs.indexOf(sr);if(k>-1)GL.srcs.splice(k,1)};
     }catch(e){}
@@ -1041,7 +1041,7 @@ if(!window.Android){
     }else{
       vad.buf.push(copy);
       if(loud){vad.lastLoud=now;vad.loudN++}
-      if(now-vad.lastLoud>520||now-vad.t0>20000)vadFinish();
+      if(now-vad.lastLoud>380||now-vad.t0>20000)vadFinish();
     }
   }
   function vadStart(){
