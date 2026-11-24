@@ -92,7 +92,7 @@ ul.tasks li.done{color:var(--dim);text-decoration:line-through}
 </head><body><div class="app">
   <div class="hdr">
     <span></span>
-    <h1><svg class="logo" viewBox="0 0 24 24"><path d="M12 2 3 21h18z" fill="#1fe86b"/><rect x="8" y="12.5" width="8" height="4" rx="2" fill="#031006"/></svg>ARCHER AI<small>v68</small></h1>
+    <h1><svg class="logo" viewBox="0 0 24 24"><path d="M12 2 3 21h18z" fill="#1fe86b"/><rect x="8" y="12.5" width="8" height="4" rx="2" fill="#031006"/></svg>ARCHER AI<small>v70</small></h1>
     <button class="sq" id="sq" aria-label="Settings">&#9881;</button>
   </div>
   <div class="row3">
@@ -545,7 +545,7 @@ if(!window.Android){
     if(!window.Android&&/memory|মেমরি/.test(s))return{t:mem.length?'আমার মনে আছে: '+mem.join('; '):'এখনো কিছু সেভ করা নেই। "remember ..." বলুন।'};
     return null;
   }
-  function speak(t){try{window.__lastSpoken=String(t);window.__lastSpokeT=Date.now();t=String(t).replace(/(^|[^\u0980-\u09FF])বস(?![\u0980-\u09FF])/g,'$1'+bossWord());if(!aiOn){relisten(400);return}if(window.Android){window.__aiSpeaking=true;try{vad.spT=Date.now();vad.echo=0;vad.bargeN=0;vad.spPre=[]}catch(e){}Android.speak(t);speed=3;$('spk').innerHTML='&bull; SPEAKING &bull;';setTimeout(function(){speed=1;if(!(talk&&vad&&vad.on))$('spk').innerHTML='&bull; READY &bull;'},2500);return}if(!window.speechSynthesis)return;var u=new SpeechSynthesisUtterance(t);speechSynthesis.cancel();speechSynthesis.speak(u);speed=3;$('spk').innerHTML='&bull; SPEAKING &bull;';setTimeout(function(){speed=1;if(!(talk&&vad&&vad.on))$('spk').innerHTML='&bull; READY &bull;'},2000)}catch(e){}}
+  function speak(t){try{dbg('speak '+String(t).slice(0,25));window.__lastSpoken=String(t);window.__lastSpokeT=Date.now();t=String(t).replace(/(^|[^\u0980-\u09FF])বস(?![\u0980-\u09FF])/g,'$1'+bossWord());if(!aiOn){relisten(400);return}if(window.Android){window.__aiSpeaking=true;try{vad.spT=Date.now();vad.echo=0;vad.bargeN=0;vad.spPre=[]}catch(e){}Android.speak(t);speed=3;$('spk').innerHTML='&bull; SPEAKING &bull;';setTimeout(function(){speed=1;if(!(talk&&vad&&vad.on))$('spk').innerHTML='&bull; READY &bull;'},2500);return}if(!window.speechSynthesis)return;var u=new SpeechSynthesisUtterance(t);speechSynthesis.cancel();speechSynthesis.speak(u);speed=3;$('spk').innerHTML='&bull; SPEAKING &bull;';setTimeout(function(){speed=1;if(!(talk&&vad&&vad.on))$('spk').innerHTML='&bull; READY &bull;'},2000)}catch(e){}}
   var hist=[],nid=0,lastQ='';
   function ask(q){
     if(!q)return; say('me',q);
@@ -573,13 +573,14 @@ if(!window.Android){
   window.onAI=function(id,out,err){
     try{if(window.__lastInfo&&!err)toast(window.__lastInfo)}catch(e){}
     var isAud=audioIds[id];delete audioIds[id];
+    dbg('onAI '+(isAud?'aud':'txt')+(err?' ERR '+String(err).slice(0,60):' ok '+String(out).replace(/\s+/g,' ').slice(0,50)));
     if(liveSR()&&!isAud&&id!==nid){
       window.__stale={out:out,err:err};clearTimeout(window.__stT);
       window.__stT=setTimeout(function(){var st=window.__stale;window.__stale=null;if(st)window.onAI(nid,st.out,st.err)},6000);
       return}
     if(!isAud){window.__stale=null;clearTimeout(window.__stT)}
     $('spk').innerHTML=talk?'&bull; LISTENING &bull;':'&bull; READY &bull;';
-    if(err){say('ai','সমস্যা হয়েছে: '+String(err).slice(0,180));relisten(1500);return}
+    if(err){say('ai','সমস্যা হয়েছে: '+String(err).slice(0,180));if(window.__autoBg||document.hidden){speak('ইন্টারনেটে একটু সমস্যা হয়েছে, আবার বলুন।')}else relisten(1500);return}
     if(isAud){
       var m=/HEARD:\s*([\s\S]*?)\s*REPLY:\s*([\s\S]*)$/i.exec(out);
       var heard=m?m[1].trim():'',rep=takeMem(m?m[2].trim():String(out).trim());
@@ -1068,7 +1069,11 @@ if(!window.Android){
   function bgMic(on){if(!on){try{vad.native=false}catch(e){}}try{if(window.AndroidTTS){if(on&&AndroidTTS.micOn)AndroidTTS.micOn();if(!on&&AndroidTTS.micOff)AndroidTTS.micOff()}}catch(e){}}
   function nativeMicOK(){try{return !!(window.AndroidTTS&&AndroidTTS.micOk&&AndroidTTS.hasMic&&AndroidTTS.hasMic())}catch(e){return false}}
   window.__nativeAudio=function(b64){
-    if(!talk||!vad.native||vad.busy||window.__aiSpeaking)return;
+    var nw=Date.now();
+    if(window.__aiSpeaking&&nw-(window.__lastSpokeT||0)>25000)window.__aiSpeaking=false;
+    if(vad.busy&&vad.bt&&nw-vad.bt>25000)vad.busy=false;
+    if(!talk||!vad.native||vad.busy||window.__aiSpeaking){dbg('audio ignored talk='+talk+' native='+vad.native+' busy='+vad.busy+' speaking='+!!window.__aiSpeaking);return}
+    dbg('audio got '+Math.round(b64.length/1000)+'k');
     vad.busy=true;vad.bt=Date.now();$('spk').innerHTML='&bull; THINKING &bull;';
     var id=++nid;audioIds[id]=1;
     Android.ask(id,AUD_PROMPT,sysPrompt(),JSON.stringify(hist.slice(-4)),'',b64,'audio/wav');
@@ -1097,8 +1102,10 @@ if(!window.Android){
 
 
   /* ---------- keep the mic alive when Archer opens another app (YouTube, TikTok...) ---------- */
+  function dbg(m){try{var a=JSON.parse(localStorage.getItem('ar_dbg')||'[]');var d=new Date();a.push(d.getMinutes()+':'+d.getSeconds()+' '+m);if(a.length>30)a=a.slice(-30);localStorage.setItem('ar_dbg',JSON.stringify(a))}catch(e){}}
   function prepBg(){
     try{
+      dbg('prepBg talk='+talk+' live='+GL.on+' mic='+nativeMicOK()+' auto='+!!window.__autoBg);
       if(!window.AndroidTTS||!AndroidTTS.micOn||!nativeMicOK())return;
       if(!(talk||GL.on)||window.__autoBg)return;
       if(GL.on){window.__wasLive=true;try{glStop()}catch(e){}}
@@ -1106,13 +1113,14 @@ if(!window.Android){
       try{AndroidTTS.srStop&&AndroidTTS.srStop()}catch(e){}
       try{AndroidTTS.micOn()}catch(e){}
       setTimeout(function(){
-        try{if(window.__autoBg&&!AndroidTTS.micOk()){window.__autoBg=false;vad.native=false;if(window.__wasLive){window.__wasLive=false;talk=false}}}catch(e){}
+        try{dbg('micOk='+AndroidTTS.micOk());if(window.__autoBg&&!AndroidTTS.micOk()){window.__autoBg=false;vad.native=false;if(window.__wasLive){window.__wasLive=false;talk=false}}}catch(e){}
       },3000);
     }catch(e){}
   }
   document.addEventListener('visibilitychange',function(){
     try{
       if(document.hidden){if(talk||GL.on)prepBg();return}
+      try{var tr=JSON.parse(localStorage.getItem('ar_dbg')||'[]');if(tr.join('').indexOf('prepBg')>-1){say('ai','ডিবাগ: '+tr.slice(-14).join(' | '))}localStorage.removeItem('ar_dbg')}catch(e){}
       if(!window.__autoBg)return;
       window.__autoBg=false;
       if(!bgModeOn()){vad.native=false;try{AndroidTTS.micOff()}catch(e){}}
