@@ -92,7 +92,7 @@ ul.tasks li.done{color:var(--dim);text-decoration:line-through}
 </head><body><div class="app">
   <div class="hdr">
     <span></span>
-    <h1><svg class="logo" viewBox="0 0 24 24"><path d="M12 2 3 21h18z" fill="#1fe86b"/><rect x="8" y="12.5" width="8" height="4" rx="2" fill="#031006"/></svg>ARCHER AI<small>v73</small></h1>
+    <h1><svg class="logo" viewBox="0 0 24 24"><path d="M12 2 3 21h18z" fill="#1fe86b"/><rect x="8" y="12.5" width="8" height="4" rx="2" fill="#031006"/></svg>ARCHER AI<small>v74</small></h1>
     <button class="sq" id="sq" aria-label="Settings">&#9881;</button>
   </div>
   <div class="row3">
@@ -689,7 +689,7 @@ if(!window.Android){
     GL.ac=new AC();try{GL.ac.resume()}catch(e){}
     return navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}}).then(function(st){
       GL.stream=st;GL.src=GL.ac.createMediaStreamSource(st);
-      GL.node=GL.ac.createScriptProcessor(2048,1,1);
+      GL.node=GL.ac.createScriptProcessor(4096,1,1);
       GL.node.onaudioprocess=function(e){
         if(!GL.on||!GL.ready||!GL.ws||GL.ws.readyState!==1)return;
         var f=e.inputBuffer.getChannelData(0),r=GL.ac.sampleRate/16000,n=Math.floor(f.length/r),o=new Int16Array(n),i,j,a,c,b;
