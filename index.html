@@ -92,7 +92,7 @@ ul.tasks li.done{color:var(--dim);text-decoration:line-through}
 </head><body><div class="app">
   <div class="hdr">
     <span></span>
-    <h1><svg class="logo" viewBox="0 0 24 24"><path d="M12 2 3 21h18z" fill="#1fe86b"/><rect x="8" y="12.5" width="8" height="4" rx="2" fill="#031006"/></svg>ARCHER AI<small>v64</small></h1>
+    <h1><svg class="logo" viewBox="0 0 24 24"><path d="M12 2 3 21h18z" fill="#1fe86b"/><rect x="8" y="12.5" width="8" height="4" rx="2" fill="#031006"/></svg>ARCHER AI<small>v65</small></h1>
     <button class="sq" id="sq" aria-label="Settings">&#9881;</button>
   </div>
   <div class="row3">
@@ -216,7 +216,7 @@ if(!window.Android){
         }
         var gr=!!window.__gr;window.__gr=false;
         function once(model){
-          var ac=new AbortController();setTimeout(function(){try{ac.abort()}catch(e){}},gr?60000:15000);
+          var ac=new AbortController();setTimeout(function(){try{ac.abort()}catch(e){}},gr?60000:(aud?9000:7000));
           return fetch(base+'models/'+encodeURIComponent(model)+':generateContent',{
             method:'POST',signal:ac.signal,
             headers:{'Content-Type':'application/json','x-goog-api-key':key},
@@ -231,7 +231,7 @@ if(!window.Android){
             names.forEach(function(n){if(order.indexOf(n)<0)order.push(n)});
             if(order.indexOf('gemini-flash-latest')<0)order.push('gemini-flash-latest');
             order=order.slice(0,5);
-            order=order.slice(0,3);
+            order=order.slice(0,2);
             var i=0,last='',n429=0;
             function next(){
               if(i>=order.length)throw new Error(last||'কোনো মডেল সাড়া দেয়নি');
@@ -327,7 +327,7 @@ if(!window.Android){
             var settled=false,hp=null,t0=Date.now();
             function ok(v,who){if(!settled){settled=true;if(who)window.__lastInfo=who+' '+((Date.now()-t0)/1000).toFixed(1)+'s';res(v)}}
             function bad(e){if(!settled){settled=true;rej(e)}}
-            var tm=setTimeout(function(){if(settled)return;hp=groqRun();hp.catch(function(){});hp.then(function(v){ok(v,'Groq')})},3500);
+            var tm=setTimeout(function(){if(settled)return;hp=groqRun();hp.catch(function(){});hp.then(function(v){ok(v,'Groq')})},aud?2200:2000);
             run().then(function(v){clearTimeout(tm);ok(v)},function(e){
               clearTimeout(tm);
               if(/429|সীমা/.test(String(e&&e.message)))window.__gemSkip=Date.now()+600000;
@@ -335,7 +335,7 @@ if(!window.Android){
             });
           });
         }
-        if(useG&&key&&!skipGem&&!gr&&!aud)pr=hedged();
+        if(useG&&key&&!skipGem&&!gr)pr=hedged();
         else if(useG&&(!key||skipGem))pr=groqRun();
         else pr=run().catch(function(e){
           if(!gr&&/429|সীমা/.test(String(e&&e.message)))window.__gemSkip=Date.now()+600000;
@@ -992,7 +992,7 @@ if(!window.Android){
   }
   setInterval(function(){
     if(!talk)return;
-    if(vad.busy&&vad.bt&&Date.now()-vad.bt>45000){vad.busy=false;vad.bt=0;$('spk').innerHTML='&bull; LISTENING &bull;'}
+    if(vad.busy&&vad.bt&&Date.now()-vad.bt>20000){vad.busy=false;vad.bt=0;$('spk').innerHTML='&bull; LISTENING &bull;'}
     if(!document.hidden)vadEnsure();
   },4000);
   function sensV(){try{return parseFloat(localStorage.getItem('ar_sens')||'0.7')}catch(e){return 0.7}}
