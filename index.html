@@ -92,7 +92,7 @@ ul.tasks li.done{color:var(--dim);text-decoration:line-through}
 </head><body><div class="app">
   <div class="hdr">
     <span></span>
-    <h1><svg class="logo" viewBox="0 0 24 24"><path d="M12 2 3 21h18z" fill="#1fe86b"/><rect x="8" y="12.5" width="8" height="4" rx="2" fill="#031006"/></svg>ARCHER AI<small>v67</small></h1>
+    <h1><svg class="logo" viewBox="0 0 24 24"><path d="M12 2 3 21h18z" fill="#1fe86b"/><rect x="8" y="12.5" width="8" height="4" rx="2" fill="#031006"/></svg>ARCHER AI<small>v68</small></h1>
     <button class="sq" id="sq" aria-label="Settings">&#9881;</button>
   </div>
   <div class="row3">
@@ -164,6 +164,7 @@ if(!window.Android){
       openApp:function(){return false},stop:function(){try{if(window.AndroidTTS&&AndroidTTS.srStop)AndroidTTS.srStop()}catch(e){}try{if(window.__rec){window.__rec.__got=1;window.__rec.abort()}}catch(e){}},
       speak:function(t){var fired=false,tm=null;var my=window.__spTok=(window.__spTok||0)+1;var d=function(){if(fired||my!==window.__spTok)return;fired=true;clearTimeout(tm);if(window.onSpoke)window.onSpoke()};if(window.AndroidTTS){try{window.__ttsDone=d;tm=setTimeout(d,Math.max(3000,t.length*160+3000));AndroidTTS.speak(t);return}catch(e){}}try{speechSynthesis.cancel();var u=new SpeechSynthesisUtterance(t);var L=/[\u0980-\u09FF]/.test(t)?'bn':/[\u0900-\u097F]/.test(t)?'hi':/[\u0600-\u06FF]/.test(t)?'ar':/[\u4E00-\u9FFF]/.test(t)?'zh':/[\u3040-\u30FF]/.test(t)?'ja':/[\uAC00-\uD7AF]/.test(t)?'ko':/[\u0400-\u04FF]/.test(t)?'ru':/[\u0E00-\u0E7F]/.test(t)?'th':'en';u.lang=L==='bn'?'bn-BD':L;try{var vs=speechSynthesis.getVoices();for(var i=0;i<vs.length;i++){if(new RegExp('^'+L,'i').test(vs[i].lang)){u.voice=vs[i];break}}}catch(e){}u.onend=d;u.onerror=d;tm=setTimeout(d,Math.max(2500,t.length*130+2500));speechSynthesis.speak(u)}catch(e){d()}},
       listen:function(){
+        if(window.__autoBg)return;
         try{if(window.AndroidTTS&&AndroidTTS.srOk&&AndroidTTS.srOk()&&LS('ar_bg','0')!=='1'){AndroidTTS.srListen();return}}catch(e){}
         if(!SR){if(window.onHeard)window.onHeard('','no-support');return}
         if(window.__rec&&window.__rec.__run)return;var rec=window.__rec=new SR();rec.__run=1;rec.lang='bn-BD';rec.interimResults=false;
@@ -335,7 +336,8 @@ if(!window.Android){
             });
           });
         }
-        if(useG&&key&&!skipGem&&!gr)pr=hedged();
+        if(useG&&key&&!gr&&aud)pr=groqRun().catch(function(){return run()});
+        else if(useG&&key&&!skipGem&&!gr)pr=hedged();
         else if(useG&&(!key||skipGem))pr=groqRun();
         else pr=run().catch(function(e){
           if(!gr&&/429|সীমা/.test(String(e&&e.message)))window.__gemSkip=Date.now()+600000;
@@ -501,7 +503,7 @@ if(!window.Android){
     Android.ask(++nid,p,sysPrompt(),'[]','');
   }
 
-  function goUrl(u){try{if(window.AndroidTTS&&AndroidTTS.openUrl)AndroidTTS.openUrl(u);else location.href=u}catch(e){}}
+  function goUrl(u){try{prepBg()}catch(e){}try{if(window.AndroidTTS&&AndroidTTS.openUrl)AndroidTTS.openUrl(u);else location.href=u}catch(e){}}
   function appByName(s){
     var t=s.replace(/[\s\-_.]/g,'');
     for(var i=0;i<APPS.length;i++)for(var j=0;j<APPS[i].k.length;j++){
@@ -1093,6 +1095,31 @@ if(!window.Android){
     }else{Android.listen()}
   }
 
+
+  /* ---------- keep the mic alive when Archer opens another app (YouTube, TikTok...) ---------- */
+  function prepBg(){
+    try{
+      if(!window.AndroidTTS||!AndroidTTS.micOn||!nativeMicOK())return;
+      if(!(talk||GL.on)||window.__autoBg)return;
+      if(GL.on){window.__wasLive=true;try{glStop()}catch(e){}}
+      talk=true;window.__autoBg=true;vad.native=true;vad.busy=false;
+      try{AndroidTTS.srStop&&AndroidTTS.srStop()}catch(e){}
+      try{AndroidTTS.micOn()}catch(e){}
+      setTimeout(function(){
+        try{if(window.__autoBg&&!AndroidTTS.micOk()){window.__autoBg=false;vad.native=false;if(window.__wasLive){window.__wasLive=false;talk=false}}}catch(e){}
+      },3000);
+    }catch(e){}
+  }
+  document.addEventListener('visibilitychange',function(){
+    try{
+      if(document.hidden){if(talk||GL.on)prepBg();return}
+      if(!window.__autoBg)return;
+      window.__autoBg=false;
+      if(!bgModeOn()){vad.native=false;try{AndroidTTS.micOff()}catch(e){}}
+      if(window.__wasLive){window.__wasLive=false;talk=false;vad.native=false;try{$('vol').style.background=''}catch(e){}setTimeout(function(){try{glStart()}catch(e){}},300);return}
+      if(talk)relisten(400);
+    }catch(e){}
+  });
   /* ---------- watchdog: if listening silently stopped, start it again ---------- */
   var lastListen=Date.now();
   try{var _L=Android.listen;Android.listen=function(){lastListen=Date.now();return _L.apply(Android,arguments)}}catch(e){}
