@@ -92,7 +92,7 @@ ul.tasks li.done{color:var(--dim);text-decoration:line-through}
 </head><body><div class="app">
   <div class="hdr">
     <span></span>
-    <h1><svg class="logo" viewBox="0 0 24 24"><path d="M12 2 3 21h18z" fill="#1fe86b"/><rect x="8" y="12.5" width="8" height="4" rx="2" fill="#031006"/></svg>ARCHER AI<small>v72</small></h1>
+    <h1><svg class="logo" viewBox="0 0 24 24"><path d="M12 2 3 21h18z" fill="#1fe86b"/><rect x="8" y="12.5" width="8" height="4" rx="2" fill="#031006"/></svg>ARCHER AI<small>v73</small></h1>
     <button class="sq" id="sq" aria-label="Settings">&#9881;</button>
   </div>
   <div class="row3">
@@ -689,10 +689,11 @@ if(!window.Android){
     GL.ac=new AC();try{GL.ac.resume()}catch(e){}
     return navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}}).then(function(st){
       GL.stream=st;GL.src=GL.ac.createMediaStreamSource(st);
-      GL.node=GL.ac.createScriptProcessor(4096,1,1);
+      GL.node=GL.ac.createScriptProcessor(2048,1,1);
       GL.node.onaudioprocess=function(e){
         if(!GL.on||!GL.ready||!GL.ws||GL.ws.readyState!==1)return;
         var f=e.inputBuffer.getChannelData(0),r=GL.ac.sampleRate/16000,n=Math.floor(f.length/r),o=new Int16Array(n),i,j,a,c,b;
+        try{var sq=0,k2;for(k2=0;k2<f.length;k2+=8)sq+=f[k2]*f[k2];if(Math.sqrt(sq/(f.length/8))>0.02&&!window.__aiSpeaking&&!GL.speaking){GL.lastLoud=Date.now();GL.gotFirst=false}}catch(x){}
         for(i=0;i<n;i++){a=Math.floor(i*r);b=Math.min(f.length,Math.floor((i+1)*r));c=0;for(j=a;j<b;j++)c+=f[j];c=b>a?c/(b-a):0;o[i]=Math.max(-1,Math.min(1,c))*32767}
         try{GL.ws.send(JSON.stringify({realtimeInput:{audio:{data:glB64(new Uint8Array(o.buffer)),mimeType:'audio/pcm;rate=16000'}}}))}catch(x){}
       };
@@ -712,6 +713,7 @@ if(!window.Android){
     try{
       var bin=atob(b64),n=bin.length>>1,buf=GL.ac.createBuffer(1,n,24000),d=buf.getChannelData(0),i;
       for(i=0;i<n;i++){var v=bin.charCodeAt(2*i)|(bin.charCodeAt(2*i+1)<<8);if(v>=32768)v-=65536;d[i]=v/32768}
+      if(!GL.gotFirst&&GL.lastLoud){GL.gotFirst=true;try{toast('⏱ '+((Date.now()-GL.lastLoud)/1000).toFixed(1)+'s · '+String((GL.combos[GL.tryI]||[''])[0]).replace('gemini-','').slice(0,30));dbg('live first audio '+(Date.now()-GL.lastLoud)+'ms '+(GL.combos[GL.tryI]||[''])[0])}catch(x){}}
       var sr=GL.ac.createBufferSource();sr.buffer=buf;
       if(!GL.comp||GL.compAc!==GL.ac){GL.comp=GL.ac.createDynamicsCompressor();GL.comp.threshold.value=-18;GL.comp.ratio.value=4;GL.comp.connect(GL.ac.destination);GL.compAc=GL.ac}var g=GL.ac.createGain();g.gain.value=3;sr.connect(g);g.connect(GL.comp);
       var t=Math.max(GL.ac.currentTime+0.05,GL.nextT);sr.start(t);GL.nextT=t+buf.duration;
