@@ -92,7 +92,7 @@ ul.tasks li.done{color:var(--dim);text-decoration:line-through}
 </head><body><div class="app">
   <div class="hdr">
     <span></span>
-    <h1><svg class="logo" viewBox="0 0 24 24"><path d="M12 2 3 21h18z" fill="#1fe86b"/><rect x="8" y="12.5" width="8" height="4" rx="2" fill="#031006"/></svg>ARCHER AI<small>v70</small></h1>
+    <h1><svg class="logo" viewBox="0 0 24 24"><path d="M12 2 3 21h18z" fill="#1fe86b"/><rect x="8" y="12.5" width="8" height="4" rx="2" fill="#031006"/></svg>ARCHER AI<small>v71</small></h1>
     <button class="sq" id="sq" aria-label="Settings">&#9881;</button>
   </div>
   <div class="row3">
@@ -301,12 +301,12 @@ if(!window.Android){
             return gmodels().then(function(g){
               var sm=(g.stt&&g.stt.length)?g.stt:['whisper-large-v3','whisper-large-v3-turbo'],si=0;
               function stt(){
-                var fd=new FormData();fd.append('file',wavBlob(aud),'a.wav');fd.append('model',sm[si++]);fd.append('response_format','json');fd.append('temperature','0');
+                var fd=new FormData();fd.append('file',wavBlob(aud),'a.wav');fd.append('model',sm[si++]);fd.append('response_format','json');fd.append('temperature','0');fd.append('language','bn');fd.append('prompt','আর্চার। ইউটিউব খোলো। ফেসবুক খোলো। টিকটক খোলো। মেসেঞ্জার খোলো। হোয়াটসঅ্যাপ খোলো। ক্যামেরা খোলো।');
                 return gfetch('https://api.groq.com/openai/v1/audio/transcriptions',{method:'POST',headers:{'Authorization':'Bearer '+gkey},body:fd}).then(function(r){return r.text().then(function(t){
                   if(!r.ok){if(si<sm.length)return stt();throw new Error('Groq শব্দ ('+r.status+'): '+gwhy(t))}
                   var heard=((JSON.parse(t).text)||'').trim();
                   var junk=heard.replace(/[\s.!?,।\-]/g,'').length<2||/^(thank you|thanks for watching|thanks|bye|you)\W*$/i.test(heard)||/ধন্যবাদ|সাবস্ক্রাইব|সাবস্ক্রিপশন|ভিডিওটি দেখ|subscribe/i.test(heard);
-                  var bad=false;
+                  var tk=heard.split(/\s+/).filter(Boolean),uq={};tk.forEach(function(w){uq[w]=1});var bad=(/[\u0600-\u06FF\u0400-\u04FF\u4E00-\u9FFF\u0E00-\u0E7F\u3040-\u30FF\uAC00-\uD7AF]/.test(heard)&&!/[\u0980-\u09FF]/.test(heard))||(tk.length>=4&&Object.keys(uq).length/tk.length<0.5);
                   if(junk||bad){
                     window.__badSTT=(window.__badSTT||0)+1;
                     if(window.__badSTT>=3){window.__badSTT=0;return 'HEARD: (অস্পষ্ট)\nREPLY: একটু কাছে এসে আস্তে আস্তে বলবেন বন্ধু?'}
@@ -949,7 +949,7 @@ if(!window.Android){
   /* ---------- microphone that stays open: hears when you start and stop talking ---------- */
   var vad={on:false,busy:true,ac:null,stream:null,src:null,node:null,pre:[],buf:[],rec:false,loud:0,loudN:0,lastLoud:0,t0:0,noise:0.008};
   var audioIds={};
-  var AUD_PROMPT='The user just spoke to you (audio attached, any language of the world). Reply in exactly this format and nothing else:\nHEARD: <exact transcript of what the user said, in the language and script they spoke>\nREPLY: <your answer>\nDo not guess. If you are not sure what was said (background noise, mumbling, a very short fragment, a different voice far away), answer exactly:\nHEARD: UNCLEAR\nREPLY: UNCLEAR\nIf the audio is only silence, leave both HEARD: and REPLY: empty.';
+  var AUD_PROMPT='The user just spoke to you (audio attached, any language of the world). Reply in exactly this format and nothing else:\nHEARD: <exact transcript of what the user said, in the language and script they spoke>\nREPLY: <your answer>\nDo not guess. If you are not sure what was said (background noise, mumbling, a very short fragment, a different voice far away), answer exactly:\nHEARD: UNCLEAR\nREPLY: UNCLEAR\nIf the audio is only silence, leave both HEARD: and REPLY: empty. If it sounds like music, a video, TV or other background sound, or you are not clearly hearing one person speaking to you, answer UNCLEAR. Never invent words.';
   function bubbleState(){try{return !!(window.AndroidTTS&&AndroidTTS.bubbleOn&&AndroidTTS.bubbleOn())}catch(e){return false}}
   function liveOn(){try{return localStorage.getItem('ar_live')!=='0'}catch(e){return true}}
   function liveSR(){return liveOn()&&srNative()}
