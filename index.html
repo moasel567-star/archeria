@@ -92,7 +92,7 @@ ul.tasks li.done{color:var(--dim);text-decoration:line-through}
 </head><body><div class="app">
   <div class="hdr">
     <span></span>
-    <h1><svg class="logo" viewBox="0 0 24 24"><path d="M12 2 3 21h18z" fill="#1fe86b"/><rect x="8" y="12.5" width="8" height="4" rx="2" fill="#031006"/></svg>ARCHER AI<small>v79</small></h1>
+    <h1><svg class="logo" viewBox="0 0 24 24"><path d="M12 2 3 21h18z" fill="#1fe86b"/><rect x="8" y="12.5" width="8" height="4" rx="2" fill="#031006"/></svg>ARCHER AI<small>v81</small></h1>
     <button class="sq" id="sq" aria-label="Settings">&#9881;</button>
   </div>
   <div class="row3">
@@ -675,6 +675,10 @@ if(!window.Android){
   function glKey(){try{return localStorage.getItem('ar_key')||''}catch(e){return ''}}
   function glB64(u8){var s='',i,n=u8.length,k=0x8000;for(i=0;i<n;i+=k)s+=String.fromCharCode.apply(null,u8.subarray(i,Math.min(n,i+k)));return btoa(s)}
   function glModels(key){
+    try{var cm=JSON.parse(localStorage.getItem('ar_glm')||'null');if(cm&&cm.ms&&cm.ms.length&&Date.now()-cm.t<43200000)return Promise.resolve(cm.ms)}catch(e){}
+    return glModels0(key).then(function(ms){try{localStorage.setItem('ar_glm',JSON.stringify({t:Date.now(),ms:ms}))}catch(e){}return ms});
+  }
+  function glModels0(key){
     return fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200',{headers:{'x-goog-api-key':key}}).then(function(r){return r.json()}).then(function(j){
       var ms=(j.models||[]).filter(function(m){return (m.supportedGenerationMethods||[]).indexOf('bidiGenerateContent')>-1}).map(function(m){return m.name.replace('models/','')});
       var sc=function(n){var x=0;if(/native-audio/.test(n))x+=10;if(/flash/.test(n))x+=3;if(/live/.test(n))x+=2;if(/preview|exp/.test(n))x-=0;if(/dialog|thinking/.test(n))x-=1;return x};
@@ -1067,14 +1071,19 @@ if(!window.Android){
   }
   function glMsg(txt){
     var j;try{j=JSON.parse(txt)}catch(e){return}
-    if(j.setupComplete){GL.ready=true;GL.readyAt=Date.now();$('spk').innerHTML='&bull; LIVE: বলুন &bull;';return}
+    if(j.setupComplete){GL.ready=true;GL.readyAt=Date.now();$('spk').innerHTML='&bull; LIVE: বলুন &bull;';
+      /* silent warm-up: one tiny hidden turn so the FIRST real answer is fast. Its audio is never played. */
+      try{GL.warm=true;GL.ws.send(JSON.stringify({realtimeInput:{text:'Say only the word ok.'}}));var wsW=GL.ws;setTimeout(function(){if(GL.ws===wsW)GL.warm=false},7000)}catch(e){GL.warm=false}
+      return}
     var sc=j.serverContent;
     if(sc){
+      if(GL.warm&&sc.inputTranscription&&sc.inputTranscription.text)GL.warm=false;
       if(sc.interrupted)glFlush();
       if(sc.modelTurn&&sc.modelTurn.parts)GL.waitSince=0;
-      if(sc.modelTurn&&sc.modelTurn.parts)sc.modelTurn.parts.forEach(function(p){if(p.inlineData&&p.inlineData.data)glPlay(p.inlineData.data)});
-      if(sc.inputTranscription&&sc.inputTranscription.text){GL.inT+=sc.inputTranscription.text;GL.waitSince=Date.now()}
-      if(sc.outputTranscription&&sc.outputTranscription.text)GL.outT+=sc.outputTranscription.text;
+      if(sc.modelTurn&&sc.modelTurn.parts)sc.modelTurn.parts.forEach(function(p){if(p.inlineData&&p.inlineData.data&&!GL.warm)glPlay(p.inlineData.data)});
+      if(!GL.warm&&sc.inputTranscription&&sc.inputTranscription.text){GL.inT+=sc.inputTranscription.text;GL.waitSince=Date.now();GL.chimed=false}
+      if(!GL.warm&&sc.outputTranscription&&sc.outputTranscription.text)GL.outT+=sc.outputTranscription.text;
+      if((sc.turnComplete||sc.generationComplete)&&GL.warm){GL.warm=false;GL.inT='';GL.outT='';GL.waitSince=0;return}
       if(sc.turnComplete||sc.generationComplete){
         GL.waitSince=0;
         var ui=GL.inT.replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim();
@@ -1101,7 +1110,7 @@ if(!window.Android){
     if(!c){toast('LIVE মডেল চালু হয়নি। পুরোনো পদ্ধতিতে কথা বলুন।');glStop();return}
     var key=glKey();
     var ws=new WebSocket('wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key='+encodeURIComponent(key));
-    GL.connAt=Date.now();GL.waitSince=0;GL.toolBusy=false;
+    GL.connAt=Date.now();GL.waitSince=0;GL.toolBusy=false;GL.warm=false;
     GL.ws=ws;GL.ready=false;
     ws.onopen=function(){
       var setup={setup:{
@@ -1162,8 +1171,14 @@ if(!window.Android){
     GL.wd=setInterval(function(){
       if(!GL.on||!GL.ws||GL.toolBusy)return;
       var now=Date.now(),stall=false,why='';
-      if(!GL.ready&&GL.connAt&&now-GL.connAt>9000){stall=true;why='সংযোগ ধীর'}
-      else if(GL.ready&&GL.waitSince&&now-GL.waitSince>9000){stall=true;why='উত্তর আটকে গিয়েছিল। আবার বলুন'}
+      /* soft 'I heard you' tick if the reply is not started 1.3s after you stop talking (sound only, changes nothing else) */
+      try{if(GL.ready&&GL.waitSince&&!GL.chimed&&!GL.warm&&now-GL.waitSince>1300&&GL.ac&&GL.ac.state==='running'){
+        GL.chimed=true;var o=GL.ac.createOscillator(),g=GL.ac.createGain();o.type='sine';o.frequency.value=880;g.gain.value=0.0001;
+        g.gain.exponentialRampToValueAtTime(0.12,GL.ac.currentTime+0.02);g.gain.exponentialRampToValueAtTime(0.0001,GL.ac.currentTime+0.16);
+        o.connect(g);g.connect(GL.ac.destination);o.start();o.stop(GL.ac.currentTime+0.18);
+        $('spk').innerHTML='&bull; THINKING &bull;';}}catch(e){}
+      if(!GL.ready&&GL.connAt&&now-GL.connAt>12000){stall=true;why='সংযোগ ধীর'}
+      else if(GL.ready&&GL.waitSince&&now-GL.waitSince>15000){stall=true;why='উত্তর আটকে গিয়েছিল। আবার বলুন'}
       else if(GL.ready&&GL.ws.bufferedAmount>240000){stall=true;why='নেটওয়ার্ক আটকে গিয়েছিল। আবার বলুন'}
       if(stall){
         GL.waitSince=0;GL.connAt=now;
@@ -1174,10 +1189,9 @@ if(!window.Android){
     $('lvlive').classList.add('on');$('spk').innerHTML='&bull; LIVE: সংযোগ হচ্ছে &bull;';
     toast('LIVE চালু। ইয়ারফোন লাগালে ভালো হবে।');
     try{if(window.AndroidTTS&&AndroidTTS.boostVolume)AndroidTTS.boostVolume()}catch(e){}
-    glModels(key).then(function(ms){
+    Promise.all([glModels(key).then(function(ms){
       GL.combos=[];var vs=glVoices();ms.forEach(function(m){vs.forEach(function(v){GL.combos.push([m,v,true]);GL.combos.push([m,v,false])})});
-      return glMic();
-    }).then(function(){glConnect()}).catch(function(e){
+    }),glMic()]).then(function(){glConnect()}).catch(function(e){
       var m=(e&&e.name==='NotAllowedError')?'মাইকের অনুমতি দিন (Allow)':(e&&e.message)||String(e);
       toast('LIVE শুরু হয়নি: '+m);glStop();
     });
