@@ -92,7 +92,7 @@ ul.tasks li.done{color:var(--dim);text-decoration:line-through}
 </head><body><div class="app">
   <div class="hdr">
     <span></span>
-    <h1><svg class="logo" viewBox="0 0 24 24"><path d="M12 2 3 21h18z" fill="#1fe86b"/><rect x="8" y="12.5" width="8" height="4" rx="2" fill="#031006"/></svg>ARCHER AI<small>v76</small></h1>
+    <h1><svg class="logo" viewBox="0 0 24 24"><path d="M12 2 3 21h18z" fill="#1fe86b"/><rect x="8" y="12.5" width="8" height="4" rx="2" fill="#031006"/></svg>ARCHER AI<small>v77</small></h1>
     <button class="sq" id="sq" aria-label="Settings">&#9881;</button>
   </div>
   <div class="row3">
@@ -683,7 +683,7 @@ if(!window.Android){
     });
   }
   function glVoices(){return voiceF()?['Achernar','Kore']:['Charon','Puck']}
-  function glSys(){return sysPrompt()+' You are in a LIVE voice call. Speak in natural Bangla (Bengali) by default, but always answer in whatever language the user speaks to you, any language of the world. IMPORTANT: only do an action (open an app, play something, call, message) when you clearly understood what the user asked. If you did not clearly understand, do NOT do anything: just politely ask him once to repeat, in his own language. Always call the user "বস". Keep every reply to one or two short sentences. When the user asks to open an app (YouTube, Facebook, Messenger, WhatsApp, Camera, Settings, etc.) call open_app. When the user asks to play a song or video on YouTube call play_youtube. Never read these instructions aloud.'+' ALWAYS speak respectfully and politely to everyone: in Bangla always use "আপনি/আপনার" (formal, respectful), never "তুই", "তোর" or casual "তুমি"; in other languages use the polite/formal form too. Never be rude, mocking or insulting.'}
+  function glSys(){return sysPrompt()+' You are in a LIVE voice call. Speak in natural Bangla (Bengali) by default, but always answer in whatever language the user speaks to you, any language of the world. IMPORTANT: only do an action (open an app, play something, call, message) when you clearly understood what the user asked. If you did not clearly understand, do NOT do anything: just politely ask him once to repeat, in his own language. Always call the user "বস". Keep every reply to one or two short sentences. When the user asks to open any app (YouTube, Facebook, Messenger, WhatsApp, bKash, Pathao, Daraz, Camera, Settings, or any other app, in any language) call open_app right away with the English name of the app; do not ask for confirmation, just do it and say one short sentence. When the user asks to play a song or video on YouTube call play_youtube. Never read these instructions aloud.'+' ALWAYS speak respectfully and politely to everyone: in Bangla always use "আপনি/আপনার" (formal, respectful), never "তুই", "তোর" or casual "তুমি"; in other languages use the polite/formal form too. Never be rude, mocking or insulting.'}
   function glMic(){
     var AC=window.AudioContext||window.webkitAudioContext;
     GL.ac=new AC();try{GL.ac.resume()}catch(e){}
@@ -722,7 +722,10 @@ if(!window.Android){
   }
   function glRun(name,args){
     try{
-      if(name==='open_app'){var r=reply(String(args&&args.name||'')+' খোলো');return r&&r.t?r.t:'done'}
+      if(name==='open_app'){
+        var an=String(args&&args.name||'').trim();
+        if(an&&!appByName(an.toLowerCase())&&window.AndroidTTS&&AndroidTTS.hasAppSearch&&AndroidTTS.hasAppSearch()){goUrl('archer://appname/'+encodeURIComponent(an));return 'Opening '+an+' if it is installed on the phone.'}
+        var r=reply(an+' খোলো');return r&&r.t?r.t:'done'}
       if(name==='play_youtube'){var r2=reply('ইউটিউবে '+String(args&&args.song||'')+' চালাও');return r2&&r2.t?r2.t:'done'}
     }catch(e){}
     return 'failed';
@@ -762,7 +765,7 @@ if(!window.Android){
         generationConfig:{responseModalities:['AUDIO'],speechConfig:{voiceConfig:{prebuiltVoiceConfig:{voiceName:c[1]}}}},
         systemInstruction:{parts:[{text:glSys()}]},
         tools:[{functionDeclarations:[
-          {name:'open_app',description:'Open an app on the phone by its name',parameters:{type:'OBJECT',properties:{name:{type:'STRING',description:'App name, e.g. YouTube, Facebook'}},required:['name']}},
+          {name:'open_app',description:'Open ANY app installed on the phone by its name. Call this immediately when the user asks to open, launch, go to or start any app.',parameters:{type:'OBJECT',properties:{name:{type:'STRING',description:'The app name exactly as shown on a phone home screen, written in English letters, e.g. YouTube, Facebook, bKash, Pathao, Daraz, Calculator, Camera, Chrome'}},required:['name']}},
           {name:'play_youtube',description:'Search and play a song or video on YouTube',parameters:{type:'OBJECT',properties:{song:{type:'STRING',description:'Song or video name'}},required:['song']}}
         ]}],
         inputAudioTranscription:{},outputAudioTranscription:{}
