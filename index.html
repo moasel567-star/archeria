@@ -92,7 +92,7 @@ ul.tasks li.done{color:var(--dim);text-decoration:line-through}
 </head><body><div class="app">
   <div class="hdr">
     <span></span>
-    <h1><svg class="logo" viewBox="0 0 24 24"><path d="M12 2 3 21h18z" fill="#1fe86b"/><rect x="8" y="12.5" width="8" height="4" rx="2" fill="#031006"/></svg>ARCHER AI<small>v77</small></h1>
+    <h1><svg class="logo" viewBox="0 0 24 24"><path d="M12 2 3 21h18z" fill="#1fe86b"/><rect x="8" y="12.5" width="8" height="4" rx="2" fill="#031006"/></svg>ARCHER AI<small>v78</small></h1>
     <button class="sq" id="sq" aria-label="Settings">&#9881;</button>
   </div>
   <div class="row3">
@@ -736,10 +736,12 @@ if(!window.Android){
     var sc=j.serverContent;
     if(sc){
       if(sc.interrupted)glFlush();
+      if(sc.modelTurn&&sc.modelTurn.parts)GL.waitSince=0;
       if(sc.modelTurn&&sc.modelTurn.parts)sc.modelTurn.parts.forEach(function(p){if(p.inlineData&&p.inlineData.data)glPlay(p.inlineData.data)});
-      if(sc.inputTranscription&&sc.inputTranscription.text)GL.inT+=sc.inputTranscription.text;
+      if(sc.inputTranscription&&sc.inputTranscription.text){GL.inT+=sc.inputTranscription.text;GL.waitSince=Date.now()}
       if(sc.outputTranscription&&sc.outputTranscription.text)GL.outT+=sc.outputTranscription.text;
       if(sc.turnComplete||sc.generationComplete){
+        GL.waitSince=0;
         var ui=GL.inT.replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim();
         var okU=ui&&(/[\u0980-\u09FF]/.test(ui)||ui.split(' ').length>=3);
         if(okU){say('me',ui)}if(GL.outT.trim()){say('ai',GL.outT.replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim())}
@@ -758,6 +760,7 @@ if(!window.Android){
     if(!c){toast('LIVE মডেল চালু হয়নি। পুরোনো পদ্ধতিতে কথা বলুন।');glStop();return}
     var key=glKey();
     var ws=new WebSocket('wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key='+encodeURIComponent(key));
+    GL.connAt=Date.now();GL.waitSince=0;
     GL.ws=ws;GL.ready=false;
     ws.onopen=function(){
       var setup={setup:{
@@ -789,6 +792,7 @@ if(!window.Android){
   }
   function glStop(){
     var was=GL.on;GL.on=false;GL.ready=false;
+    try{clearInterval(GL.wd)}catch(e){}GL.wd=0;
     try{if(GL.ws){var w=GL.ws;GL.ws=null;w.close()}}catch(e){}
     glFlush();
     try{if(GL.node){GL.node.onaudioprocess=null;GL.node.disconnect()}}catch(e){}
@@ -805,6 +809,20 @@ if(!window.Android){
     if(!key){toast('আগে Settings-এ Gemini key বসান');return}
     if(talk){try{$('stop').click()}catch(e){}}
     GL.on=true;GL.tryI=0;GL.rapid=0;
+    /* watchdog: never stay stuck. If the connection or a reply hangs, reconnect fast instead of waiting minutes */
+    try{clearInterval(GL.wd)}catch(e){}
+    GL.wd=setInterval(function(){
+      if(!GL.on||!GL.ws)return;
+      var now=Date.now(),stall=false,why='';
+      if(!GL.ready&&GL.connAt&&now-GL.connAt>9000){stall=true;why='সংযোগ ধীর'}
+      else if(GL.ready&&GL.waitSince&&now-GL.waitSince>9000){stall=true;why='উত্তর আটকে গিয়েছিল। আবার বলুন'}
+      else if(GL.ready&&GL.ws.bufferedAmount>240000){stall=true;why='নেটওয়ার্ক আটকে গিয়েছিল। আবার বলুন'}
+      if(stall){
+        GL.waitSince=0;GL.connAt=now;
+        toast(why);
+        try{GL.ws.close()}catch(e){}
+      }
+    },1000);
     $('lvlive').classList.add('on');$('spk').innerHTML='&bull; LIVE: সংযোগ হচ্ছে &bull;';
     toast('LIVE চালু। ইয়ারফোন লাগালে ভালো হবে।');
     try{if(window.AndroidTTS&&AndroidTTS.boostVolume)AndroidTTS.boostVolume()}catch(e){}
