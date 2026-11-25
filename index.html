@@ -92,7 +92,7 @@ ul.tasks li.done{color:var(--dim);text-decoration:line-through}
 </head><body><div class="app">
   <div class="hdr">
     <span></span>
-    <h1><svg class="logo" viewBox="0 0 24 24"><path d="M12 2 3 21h18z" fill="#1fe86b"/><rect x="8" y="12.5" width="8" height="4" rx="2" fill="#031006"/></svg>ARCHER AI<small>v82</small></h1>
+    <h1><svg class="logo" viewBox="0 0 24 24"><path d="M12 2 3 21h18z" fill="#1fe86b"/><rect x="8" y="12.5" width="8" height="4" rx="2" fill="#031006"/></svg>ARCHER AI<small>v83</small></h1>
     <button class="sq" id="sq" aria-label="Settings">&#9881;</button>
   </div>
   <div class="row3">
@@ -1093,12 +1093,15 @@ if(!window.Android){
         var ui=GL.inT.replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim();
         var okU=ui&&(/[\u0980-\u09FF]/.test(ui)||ui.split(' ').length>=3);
         if(okU){say('me',ui)}if(GL.outT.trim()){say('ai',GL.outT.replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim())}
+        /* safety net: the voice said it set a reminder but never ran the tool -> do it for real and show proof on screen */
+        if(okU&&!GL.toolCalled&&/(মনে করিয়ে|মনে করাইয়া|রিমাইন্ড|remind me|reminder)/i.test(ui)){var uiR=ui;setTimeout(function(){try{agRun(uiR,{live:true})}catch(e){}},300)}
+        GL.toolCalled=false;
         GL.inT='';GL.outT='';
       }
     }
     var tc=j.toolCall;
     if(tc&&tc.functionCalls){
-      GL.toolBusy=true;GL.waitSince=0;var wsT=GL.ws;
+      GL.toolBusy=true;GL.waitSince=0;GL.toolCalled=true;var wsT=GL.ws;
       Promise.all(tc.functionCalls.map(function(f){
         return Promise.race([Promise.resolve(glRun(f.name,f.args)),new Promise(function(r){setTimeout(function(){r('এই কাজে অনেক সময় লাগছে, পরে আবার বলুন')},55000)})])
           .catch(function(){return'failed'}).then(function(r){return{id:f.id,name:f.name,response:{result:r}}});
