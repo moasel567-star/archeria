@@ -92,7 +92,7 @@ ul.tasks li.done{color:var(--dim);text-decoration:line-through}
 </head><body><div class="app">
   <div class="hdr">
     <span></span>
-    <h1><svg class="logo" viewBox="0 0 24 24"><path d="M12 2 3 21h18z" fill="#1fe86b"/><rect x="8" y="12.5" width="8" height="4" rx="2" fill="#031006"/></svg>ARCHER AI<small>v85</small></h1>
+    <h1><svg class="logo" viewBox="0 0 24 24"><path d="M12 2 3 21h18z" fill="#1fe86b"/><rect x="8" y="12.5" width="8" height="4" rx="2" fill="#031006"/></svg>ARCHER AI<small>v86</small></h1>
     <button class="sq" id="sq" aria-label="Settings">&#9881;</button>
   </div>
   <div class="row3">
@@ -698,7 +698,18 @@ if(!window.Android){
       GL.node.onaudioprocess=function(e){
         if(!GL.on||!GL.ready||!GL.ws||GL.ws.readyState!==1)return;
         var f=e.inputBuffer.getChannelData(0),r=GL.ac.sampleRate/16000,n=Math.floor(f.length/r),o=new Int16Array(n),i,j,a,c,b;
-        try{var sq=0,k2;for(k2=0;k2<f.length;k2+=8)sq+=f[k2]*f[k2];if(Math.sqrt(sq/(f.length/8))>0.02&&!window.__aiSpeaking&&!GL.speaking){GL.lastLoud=Date.now();GL.gotFirst=false}}catch(x){}
+        try{var sq=0,k2;for(k2=0;k2<f.length;k2+=8)sq+=f[k2]*f[k2];var rms=Math.sqrt(sq/(f.length/8));if(rms>0.02&&!window.__aiSpeaking&&!GL.speaking){GL.lastLoud=Date.now();GL.gotFirst=false}
+          /* noise-proof end-of-speech nudge: if the server keeps waiting (noise) 1.2s after you stopped, tell it the speech ended */
+          var nw=Date.now();if(GL.floor==null)GL.floor=0.01;
+          if(rms<GL.floor*1.6)GL.floor=GL.floor*0.9+rms*0.1;else GL.floor=Math.min(0.08,GL.floor*1.003);
+          var spk=rms>Math.max(0.02,GL.floor*2.4)&&!window.__aiSpeaking&&!GL.speaking;
+          if(spk){GL.spN=(GL.spN||0)+1;GL.spLast=nw;GL.nudged=false}
+          else if((GL.spN||0)>=2&&!GL.nudged&&nw-GL.spLast>1200&&(GL.lastModelAudio||0)<GL.spLast&&!GL.warm&&!GL.toolBusy){
+            var nn=false;try{nn=localStorage.getItem('ar_nonudge')==='1'}catch(e2){}
+            GL.nudged=true;GL.spN=0;
+            if(!nn){GL.nudgeAt=nw;try{GL.ws.send(JSON.stringify({realtimeInput:{audioStreamEnd:true}}));dbg('nudge')}catch(e3){}}
+          }
+        }catch(x){}
         for(i=0;i<n;i++){a=Math.floor(i*r);b=Math.min(f.length,Math.floor((i+1)*r));c=0;for(j=a;j<b;j++)c+=f[j];c=b>a?c/(b-a):0;o[i]=Math.max(-1,Math.min(1,c))*32767}
         try{GL.ws.send(JSON.stringify({realtimeInput:{audio:{data:glB64(new Uint8Array(o.buffer)),mimeType:'audio/pcm;rate=16000'}}}))}catch(x){}
       };
@@ -1091,7 +1102,7 @@ if(!window.Android){
     if(sc){
       if(GL.warm&&sc.inputTranscription&&sc.inputTranscription.text)GL.warm=false;
       if(sc.interrupted)glFlush();
-      if(sc.modelTurn&&sc.modelTurn.parts)GL.waitSince=0;
+      if(sc.modelTurn&&sc.modelTurn.parts){GL.waitSince=0;GL.lastModelAudio=Date.now();GL.spN=0}
       if(sc.modelTurn&&sc.modelTurn.parts)sc.modelTurn.parts.forEach(function(p){if(p.inlineData&&p.inlineData.data&&!GL.warm)glPlay(p.inlineData.data)});
       if(!GL.warm&&sc.inputTranscription&&sc.inputTranscription.text){GL.inT+=sc.inputTranscription.text;GL.waitSince=Date.now();GL.chimed=false}
       if(!GL.warm&&sc.outputTranscription&&sc.outputTranscription.text)GL.outT+=sc.outputTranscription.text;
@@ -1148,6 +1159,7 @@ if(!window.Android){
     ws.onmessage=function(ev){if(GL.ws!==ws)return;if(typeof ev.data==='string')glMsg(ev.data);else if(ev.data&&ev.data.text)ev.data.text().then(glMsg);else try{glMsg(new TextDecoder().decode(ev.data))}catch(e){}};
     ws.onerror=function(){};
     ws.onclose=function(ev){
+      try{if(GL.nudgeAt&&Date.now()-GL.nudgeAt<3000)localStorage.setItem('ar_nonudge','1')}catch(e){}
       if(!GL.on||GL.ws!==ws)return;
       if(!GL.ready){GL.tryI++;if(GL.tryI<GL.combos.length){setTimeout(glConnect,300)}else{toast('LIVE সংযোগ হয়নি'+(ev&&ev.reason?': '+String(ev.reason).slice(0,120):'')+'। পুরোনো পদ্ধতিতে কথা বলুন।');glStop()}return}
       if(Date.now()-GL.readyAt<6000)GL.rapid++;else GL.rapid=0;
