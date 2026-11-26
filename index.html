@@ -92,7 +92,7 @@ ul.tasks li.done{color:var(--dim);text-decoration:line-through}
 </head><body><div class="app">
   <div class="hdr">
     <span></span>
-    <h1><svg class="logo" viewBox="0 0 24 24"><path d="M12 2 3 21h18z" fill="#1fe86b"/><rect x="8" y="12.5" width="8" height="4" rx="2" fill="#031006"/></svg>ARCHER AI<small>v86</small></h1>
+    <h1><svg class="logo" viewBox="0 0 24 24"><path d="M12 2 3 21h18z" fill="#1fe86b"/><rect x="8" y="12.5" width="8" height="4" rx="2" fill="#031006"/></svg>ARCHER AI<small>v87</small></h1>
     <button class="sq" id="sq" aria-label="Settings">&#9881;</button>
   </div>
   <div class="row3">
@@ -557,7 +557,7 @@ if(!window.Android){
     if(r){setTimeout(function(){say('ai',r.t,r.app);speak(r.t)},60);return}
     if(window.Android&&Android.hasKey()){
       lastQ=q;$('spk').innerHTML='&bull; THINKING &bull;';
-      Android.ask(++nid,q,sysPrompt(),JSON.stringify(hist.slice(-4)),(window.WEB&&camStream)?camFrame():'');
+      Android.ask(++nid,q,sysPrompt(),JSON.stringify(hist.slice(-10)),(window.WEB&&camStream)?camFrame():'');
       return;
     }
     var t=window.Android?'Settings খুলে Gemini API key বসান, তারপর আমি উত্তর দিতে পারব।':'এটা ডেমো মোড, আসল AI যুক্ত নয়। অ্যান্ড্রয়েড অ্যাপে key বসালে উত্তর দেব।';
@@ -572,7 +572,7 @@ if(!window.Android){
   }
   window.__isCmd=function(t){if(appByName(t.toLowerCase()))return true;return /খোল|খুল|ওপেন|চালু|চালাও|ফোন|কল কর|মেসেজ|এসএমএস|ইউটিউব|ফেসবুক|টিকটক|হোয়াটস|মেসেঞ্জার|ইমু|ইনস্টাগ্রাম|টুইটার|হোম|সেটিংস|রিমাইন্ড|মনে করিয়ে|গবেষণা|রিসার্চ|তুলনা|যাচাই|ফাইল|ফোল্ডার|পরিকল্পনা|\bremind|\bresearch|\bcompare|প্লে স্টোর|চ্যাটজিপিটি|মালিক|লক করো|তোমার নাম|তুমি কে|আপনি কে|আমি কে|আমার নাম|\bopen\b|\bcall\b|\bplay\b/i.test(t)};
   window.onAI=function(id,out,err){
-    try{if(window.__lastInfo&&!err)toast(window.__lastInfo)}catch(e){}
+    try{if(window.__lastInfo&&!err)toast(window.__lastInfo+' · মোট '+((Date.now()-(window.__t0||Date.now()))/1000).toFixed(1)+'s')}catch(e){}
     var isAud=audioIds[id];delete audioIds[id];
     dbg('onAI '+(isAud?'aud':'txt')+(err?' ERR '+String(err).slice(0,60):' ok '+String(out).replace(/\s+/g,' ').slice(0,50)));
     if(liveSR()&&!isAud&&id!==nid){
@@ -591,7 +591,7 @@ if(!window.Android){
       var r=reply(heard);
       if(r&&r.news){say('ai',r.t);newsAsk(heard);return}
       if(r){say('ai',r.t,r.app);speak(r.t);return}
-      if(rep==='__LOCAL__'){lastQ=heard;$('spk').innerHTML='&bull; THINKING &bull;';Android.ask(++nid,heard,sysPrompt(),JSON.stringify(hist.slice(-4)),'');return}
+      if(rep==='__LOCAL__'){lastQ=heard;$('spk').innerHTML='&bull; THINKING &bull;';Android.ask(++nid,heard,sysPrompt(),JSON.stringify(hist.slice(-10)),'');return}
       hist.push({r:'user',t:heard});hist.push({r:'model',t:rep});
       say('ai',rep);speak(rep);return;
     }
@@ -729,7 +729,7 @@ if(!window.Android){
     try{
       var bin=atob(b64),n=bin.length>>1,buf=GL.ac.createBuffer(1,n,24000),d=buf.getChannelData(0),i;
       for(i=0;i<n;i++){var v=bin.charCodeAt(2*i)|(bin.charCodeAt(2*i+1)<<8);if(v>=32768)v-=65536;d[i]=v/32768}
-      if(!GL.gotFirst&&GL.lastLoud){GL.gotFirst=true;try{var lt='⏱ '+((Date.now()-GL.lastLoud)/1000).toFixed(1)+'s · '+String((GL.combos[GL.tryI]||[''])[0]).replace('gemini-','').slice(0,34);var le=document.getElementById('latmeter');if(!le){le=document.createElement('div');le.id='latmeter';le.style.cssText='position:fixed;left:0;right:0;bottom:4px;text-align:center;font:12px monospace;color:#6f6;opacity:.85;pointer-events:none;z-index:9999';document.body.appendChild(le)}le.textContent=lt;dbg('live first audio '+(Date.now()-GL.lastLoud)+'ms '+(GL.combos[GL.tryI]||[''])[0])}catch(x){}}
+      if(!GL.gotFirst&&GL.lastLoud){GL.gotFirst=true;try{var lt='⏱ '+((Date.now()-GL.lastLoud)/1000).toFixed(1)+'s (কথা শেষ→প্রথম শব্দ) · সংযোগ '+((GL.connMs||0)/1000).toFixed(1)+'s · '+String((GL.combos[GL.tryI]||[''])[0]).replace('gemini-','').slice(0,34);var le=document.getElementById('latmeter');if(!le){le=document.createElement('div');le.id='latmeter';le.style.cssText='position:fixed;left:0;right:0;bottom:4px;text-align:center;font:12px monospace;color:#6f6;opacity:.85;pointer-events:none;z-index:9999';document.body.appendChild(le)}le.textContent=lt;dbg('live first audio '+(Date.now()-GL.lastLoud)+'ms '+(GL.combos[GL.tryI]||[''])[0])}catch(x){}}
       var sr=GL.ac.createBufferSource();sr.buffer=buf;
       if(!GL.comp||GL.compAc!==GL.ac){GL.comp=GL.ac.createDynamicsCompressor();GL.comp.threshold.value=-18;GL.comp.ratio.value=4;GL.comp.connect(GL.ac.destination);GL.compAc=GL.ac}var g=GL.ac.createGain();g.gain.value=3;sr.connect(g);g.connect(GL.comp);
       var t=Math.max(GL.ac.currentTime+0.05,GL.nextT);sr.start(t);GL.nextT=t+buf.duration;
@@ -1094,7 +1094,7 @@ if(!window.Android){
   }
   function glMsg(txt){
     var j;try{j=JSON.parse(txt)}catch(e){return}
-    if(j.setupComplete){GL.ready=true;GL.readyAt=Date.now();$('spk').innerHTML='&bull; LIVE: বলুন &bull;';
+    if(j.setupComplete){GL.ready=true;GL.readyAt=Date.now();GL.connMs=GL.readyAt-(GL.connAt||GL.readyAt);$('spk').innerHTML='&bull; LIVE: বলুন &bull;';
       /* silent warm-up: one tiny hidden turn so the FIRST real answer is fast. Its audio is never played. */
       try{GL.warm=true;GL.ws.send(JSON.stringify({realtimeInput:{text:'Say only the word ok.'}}));var wsW=GL.ws;setTimeout(function(){if(GL.ws===wsW)GL.warm=false},7000)}catch(e){GL.warm=false}
       return}
@@ -1386,7 +1386,7 @@ if(!window.Android){
     vad.busy=true;vad.bt=Date.now();$('spk').innerHTML='&bull; THINKING &bull;';
     var b64=wavB64(chunks,vad.ac.sampleRate);
     var id=++nid;audioIds[id]=1;
-    Android.ask(id,AUD_PROMPT,sysPrompt(),JSON.stringify(hist.slice(-4)),(window.WEB&&camStream)?camFrame():'',b64,'audio/wav');
+    Android.ask(id,AUD_PROMPT,sysPrompt(),JSON.stringify(hist.slice(-10)),(window.WEB&&camStream)?camFrame():'',b64,'audio/wav');
   }
   function vadEnsure(){
     if(!talk||!window.WEB||!vadSupported()||vad.starting||vad.native)return;
@@ -1481,7 +1481,7 @@ if(!window.Android){
     dbg('audio got '+Math.round(b64.length/1000)+'k');
     vad.busy=true;vad.bt=Date.now();$('spk').innerHTML='&bull; THINKING &bull;';
     var id=++nid;audioIds[id]=1;
-    Android.ask(id,AUD_PROMPT,sysPrompt(),JSON.stringify(hist.slice(-4)),'',b64,'audio/wav');
+    Android.ask(id,AUD_PROMPT,sysPrompt(),JSON.stringify(hist.slice(-10)),'',b64,'audio/wav');
   };
   function voiceStart(){
     try{if(window.AndroidTTS){if(srNative())toast('শোনার মোড: দ্রুত (অ্যান্ড্রয়েড)');else if(!AndroidTTS.srOk)toast('আপনার অ্যাপ পুরনো! নতুন APK (v9) ইনস্টল করুন');else toast('শোনার মোড: ধীর (পেছনে শোনা)')}else toast('শোনার মোড: ব্রাউজার')}catch(e){}
