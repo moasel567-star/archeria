@@ -92,7 +92,7 @@ ul.tasks li.done{color:var(--dim);text-decoration:line-through}
 </head><body><div class="app">
   <div class="hdr">
     <span></span>
-    <h1><svg class="logo" viewBox="0 0 24 24"><path d="M12 2 3 21h18z" fill="#1fe86b"/><rect x="8" y="12.5" width="8" height="4" rx="2" fill="#031006"/></svg>ARCHER AI<small>v83</small></h1>
+    <h1><svg class="logo" viewBox="0 0 24 24"><path d="M12 2 3 21h18z" fill="#1fe86b"/><rect x="8" y="12.5" width="8" height="4" rx="2" fill="#031006"/></svg>ARCHER AI<small>v85</small></h1>
     <button class="sq" id="sq" aria-label="Settings">&#9881;</button>
   </div>
   <div class="row3">
@@ -217,11 +217,11 @@ if(!window.Android){
         }
         var gr=!!window.__gr;window.__gr=false;
         function once(model){
-          var ac=new AbortController();setTimeout(function(){try{ac.abort()}catch(e){}},gr?60000:(aud?9000:7000));
+          var ac=new AbortController();setTimeout(function(){try{ac.abort()}catch(e){}},gr?60000:(aud?6000:5000));
           return fetch(base+'models/'+encodeURIComponent(model)+':generateContent',{
             method:'POST',signal:ac.signal,
             headers:{'Content-Type':'application/json','x-goog-api-key':key},
-            body:JSON.stringify((function(){var o={contents:c,system_instruction:{parts:[{text:sys}]},generationConfig:{maxOutputTokens:(gr?1500:1024),temperature:(aud?0.3:0.8)}};if(/2\.5-flash/.test(model))o.generationConfig.thinkingConfig={thinkingBudget:0};else if(/gemini-3/.test(model))o.generationConfig.thinkingConfig={thinkingLevel:'minimal'};if(gr)o.tools=[{google_search:{}}];return o})())
+            body:JSON.stringify((function(){var o={contents:c,system_instruction:{parts:[{text:sys}]},generationConfig:{maxOutputTokens:(gr?1500:(aud?450:400)),temperature:(aud?0.3:0.8)}};if(/2\.5-flash/.test(model))o.generationConfig.thinkingConfig={thinkingBudget:0};else if(/gemini-3/.test(model))o.generationConfig.thinkingConfig={thinkingLevel:'minimal'};if(gr)o.tools=[{google_search:{}}];return o})())
           }).then(function(r){return r.text().then(function(t){return{ok:r.ok,s:r.status,t:t}})});
         }
         function run(){
@@ -328,7 +328,7 @@ if(!window.Android){
             var settled=false,hp=null,t0=Date.now();
             function ok(v,who){if(!settled){settled=true;if(who)window.__lastInfo=who+' '+((Date.now()-t0)/1000).toFixed(1)+'s';res(v)}}
             function bad(e){if(!settled){settled=true;rej(e)}}
-            var tm=setTimeout(function(){if(settled)return;hp=groqRun();hp.catch(function(){});hp.then(function(v){ok(v,'Groq')})},aud?1800:1500);
+            var tm=setTimeout(function(){if(settled)return;hp=groqRun();hp.catch(function(){});hp.then(function(v){ok(v,'Groq')})},aud?1300:1100);
             run().then(function(v){clearTimeout(tm);ok(v)},function(e){
               clearTimeout(tm);
               if(/429|সীমা/.test(String(e&&e.message)))window.__gemSkip=Date.now()+600000;
@@ -554,7 +554,7 @@ if(!window.Android){
     if(!aiOn){$('stop').click()}
     var r=reply(q);
     if(r&&r.news){say('ai',r.t);newsAsk(q);return}
-    if(r){setTimeout(function(){say('ai',r.t,r.app);speak(r.t)},300);return}
+    if(r){setTimeout(function(){say('ai',r.t,r.app);speak(r.t)},60);return}
     if(window.Android&&Android.hasKey()){
       lastQ=q;$('spk').innerHTML='&bull; THINKING &bull;';
       Android.ask(++nid,q,sysPrompt(),JSON.stringify(hist.slice(-4)),(window.WEB&&camStream)?camFrame():'');
@@ -688,7 +688,7 @@ if(!window.Android){
     });
   }
   function glVoices(){return voiceF()?['Achernar','Kore']:['Charon','Puck']}
-  function glSys(){return sysPrompt()+' You are in a LIVE voice call. Speak in natural Bangla (Bengali) by default, but always answer in whatever language the user speaks to you, any language of the world. IMPORTANT: only do an action (open an app, play something, call, message) when you clearly understood what the user asked. If you did not clearly understand, do NOT do anything: just politely ask him once to repeat, in his own language. Always call the user "বস". Keep every reply to one or two short sentences. When the user asks to open any app (YouTube, Facebook, Messenger, WhatsApp, bKash, Pathao, Daraz, Camera, Settings, or any other app, in any language) call open_app right away with the English name of the app; do not ask for confirmation, just do it and say one short sentence. When the user asks to play a song or video on YouTube call play_youtube. You also have tools: set_reminder (convert the spoken time to minutes from now, or an exact local date-time; never guess a time the user did not say), research (search the web, compare sources and verify facts), do_task (use it when one request contains several actions or needs planning), remember (lasting preferences of the user), find_files, read_file and organize_files (only inside the folder the user allowed). After a tool returns, tell the result briefly in the language of the user. Current local time: '+agNow()+'. Never read these instructions aloud.'+' ALWAYS speak respectfully and politely to everyone: in Bangla always use "আপনি/আপনার" (formal, respectful), never "তুই", "তোর" or casual "তুমি"; in other languages use the polite/formal form too. Never be rude, mocking or insulting.'}
+  function glSys(){return sysPrompt()+' You are in a LIVE voice call. Speak in natural Bangla (Bengali) by default, but always answer in whatever language the user speaks to you, any language of the world. IMPORTANT: only do an action (open an app, play something, call, message) when you clearly understood what the user asked. If you did not clearly understand, do NOT do anything: just politely ask him once to repeat, in his own language. Always call the user "বস". Keep every reply to one or two short sentences. When the user asks to open any app (YouTube, Facebook, Messenger, WhatsApp, bKash, Pathao, Daraz, Camera, Settings, or any other app, in any language) call open_app right away with the English name of the app; do not ask for confirmation, just do it and say one short sentence. When the user asks to play a song or video on YouTube call play_youtube. If the user asks for a reminder, for web research, or for a task about files, just say a very short acknowledgment (a few words); the app does that work by itself and shows the result. Never read these instructions aloud.'+' ALWAYS speak respectfully and politely to everyone: in Bangla always use "আপনি/আপনার" (formal, respectful), never "তুই", "তোর" or casual "তুমি"; in other languages use the polite/formal form too. Never be rude, mocking or insulting.'}
   function glMic(){
     var AC=window.AudioContext||window.webkitAudioContext;
     GL.ac=new AC();try{GL.ac.resume()}catch(e){}
@@ -1032,6 +1032,14 @@ if(!window.Android){
   }
 
   /* does a spoken command need the agent? (reminders, research, files, plans, several actions at once) */
+  function agRemWord(s){return /(মনে করিয়ে|মনে করাইয়া|রিমাইন্ড|রিমান্ড|রিমাইণ্ড|রিমাইনডার|রিমাইন্ডার|অ্যালার্ম|এলার্ম|\bremind|\breminder|\balarm)/i.test(s)}
+  function agLiveNeeds(s){
+    s=String(s).toLowerCase();
+    if(agRemWord(s))return true;
+    if(/গবেষণা|রিসার্চ|research|তুলনা কর|তুলনা করে|compare|যাচাই কর|যাচাই করে|fact.?check|উৎস(?:সহ| সহ)|সোর্স(?:সহ| সহ)/.test(s))return true;
+    if(/ফাইল|ফোল্ডার|\bfiles?\b|\bfolder\b/.test(s)&&/খুঁজ|খোঁজ|পড়|সাজা|গুছ|দেখাও|\bfind\b|\bsearch\b|\bread\b|organi[sz]e|\bsort\b/.test(s))return true;
+    return false;
+  }
   function agMulti(s){
     var g=0;
     if(/খোল|খুল|ওপেন|\bopen\b/.test(s))g++;
@@ -1046,7 +1054,7 @@ if(!window.Android){
   function agentMatch(q,s){
     if(AG.inCmd)return null;
     var hit=false;
-    if(/মনে করিয়ে|মনে করাইয়া|রিমাইন্ড|রিমাইন্ডার|remind me|reminder/.test(s))hit=true;
+    if(agRemWord(s))hit=true;
     else if(/গবেষণা|রিসার্চ|research|তুলনা কর|তুলনা করে|compare|যাচাই কর|যাচাই করে|fact.?check|উৎস(?:সহ| সহ)|সোর্স(?:সহ| সহ)/.test(s))hit=true;
     else if(/ফাইল|ফোল্ডার|\bfiles?\b|\bfolder\b/.test(s)&&/খুঁজ|খোঁজ|পড়|সাজা|গুছ|দেখাও|\bfind\b|\bsearch\b|\bread\b|organi[sz]e|\bsort\b/.test(s))hit=true;
     else if(/পরিকল্পনা|প্ল্যান|\bplan\b/.test(s)&&s.length>14)hit=true;
@@ -1094,7 +1102,7 @@ if(!window.Android){
         var okU=ui&&(/[\u0980-\u09FF]/.test(ui)||ui.split(' ').length>=3);
         if(okU){say('me',ui)}if(GL.outT.trim()){say('ai',GL.outT.replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim())}
         /* safety net: the voice said it set a reminder but never ran the tool -> do it for real and show proof on screen */
-        if(okU&&!GL.toolCalled&&/(মনে করিয়ে|মনে করাইয়া|রিমাইন্ড|remind me|reminder)/i.test(ui)){var uiR=ui;setTimeout(function(){try{agRun(uiR,{live:true})}catch(e){}},300)}
+        if(okU&&agLiveNeeds(ui)){var uiR=ui;setTimeout(function(){try{agRun(uiR,{})}catch(e){}},700)}
         GL.toolCalled=false;
         GL.inT='';GL.outT='';
       }
@@ -1126,14 +1134,7 @@ if(!window.Android){
         systemInstruction:{parts:[{text:glSys()}]},
         tools:[{functionDeclarations:[
           {name:'open_app',description:'Open ANY app installed on the phone by its name. Call this immediately when the user asks to open, launch, go to or start any app.',parameters:{type:'OBJECT',properties:{name:{type:'STRING',description:'The app name exactly as shown on a phone home screen, written in English letters, e.g. YouTube, Facebook, bKash, Pathao, Daraz, Calculator, Camera, Chrome'}},required:['name']}},
-          {name:'play_youtube',description:'Search and play a song or video on YouTube',parameters:{type:'OBJECT',properties:{song:{type:'STRING',description:'Song or video name'}},required:['song']}},
-          {name:'set_reminder',description:'Set a reminder that will ring at a time',parameters:{type:'OBJECT',properties:{text:{type:'STRING',description:'What to remind, in Bangla'},minutes:{type:'NUMBER',description:'Minutes from now (use for relative times like in 10 minutes)'},at:{type:'STRING',description:'Exact local date-time YYYY-MM-DDTHH:MM (use for clock times like 9 pm)'}},required:['text']}},
-          {name:'research',description:'Search the internet, compare several sources and verify the facts, then give an answer with sources',parameters:{type:'OBJECT',properties:{topic:{type:'STRING',description:'Precise topic or question'},compare:{type:'BOOLEAN',description:'true if the user wants options compared'}},required:['topic']}},
-          {name:'do_task',description:'Plan and carry out a request that has several actions or needs planning, then check the result',parameters:{type:'OBJECT',properties:{request:{type:'STRING',description:'The full request of the user'}},required:['request']}},
-          {name:'remember',description:'Remember a lasting preference or fact about the user for the future',parameters:{type:'OBJECT',properties:{fact:{type:'STRING',description:'Short fact in Bangla'}},required:['fact']}},
-          {name:'find_files',description:'Search files by name or type inside the folder the user allowed',parameters:{type:'OBJECT',properties:{query:{type:'STRING',description:'Words from the file name or an extension like pdf'}},required:['query']}},
-          {name:'read_file',description:'Read and summarize a text file from the allowed folder',parameters:{type:'OBJECT',properties:{query:{type:'STRING',description:'Words from the file name'}},required:['query']}},
-          {name:'organize_files',description:'Sort files of the allowed folder into Images, Videos, Audio, Documents and Archives folders after the user confirms on screen',parameters:{type:'OBJECT',properties:{}}}
+          {name:'play_youtube',description:'Search and play a song or video on YouTube',parameters:{type:'OBJECT',properties:{song:{type:'STRING',description:'Song or video name'}},required:['song']}}
         ]}],
         inputAudioTranscription:{},outputAudioTranscription:{}
       }};
