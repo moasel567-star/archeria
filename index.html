@@ -92,7 +92,7 @@ ul.tasks li.done{color:var(--dim);text-decoration:line-through}
 </head><body><div class="app">
   <div class="hdr">
     <span></span>
-    <h1><svg class="logo" viewBox="0 0 24 24"><path d="M12 2 3 21h18z" fill="#1fe86b"/><rect x="8" y="12.5" width="8" height="4" rx="2" fill="#031006"/></svg>ARCHER AI<small>v94</small></h1>
+    <h1><svg class="logo" viewBox="0 0 24 24"><path d="M12 2 3 21h18z" fill="#1fe86b"/><rect x="8" y="12.5" width="8" height="4" rx="2" fill="#031006"/></svg>ARCHER AI<small>v95</small></h1>
     <button class="sq" id="sq" aria-label="Settings">&#9881;</button>
   </div>
   <div class="row3">
@@ -1139,6 +1139,7 @@ if(!window.Android){
     GL.connAt=Date.now();GL.waitSince=0;GL.toolBusy=false;GL.warm=false;
     GL.ws=ws;GL.ready=false;
     ws.onopen=function(){
+      ws._op=true;
       var setup={setup:{
         model:'models/'+c[0],
         generationConfig:{responseModalities:['AUDIO'],speechConfig:{voiceConfig:{prebuiltVoiceConfig:{voiceName:c[1]}}}},
@@ -1149,6 +1150,7 @@ if(!window.Android){
         ]}],
         inputAudioTranscription:{},outputAudioTranscription:{}
       }};
+      if(c[3])setup.setup.generationConfig.speechConfig.languageCode='bn-BD';
       if(c[2]){
         // faster turn-taking: answer as soon as you stop talking, ignore small noises
         setup.setup.realtimeInputConfig={automaticActivityDetection:{startOfSpeechSensitivity:'START_SENSITIVITY_LOW',endOfSpeechSensitivity:'END_SENSITIVITY_HIGH',prefixPaddingMs:100,silenceDurationMs:280}};
@@ -1161,7 +1163,7 @@ if(!window.Android){
     ws.onclose=function(ev){
       try{if(GL.nudgeAt&&Date.now()-GL.nudgeAt<3000)localStorage.setItem('ar_nonudge','1')}catch(e){}
       if(!GL.on||GL.ws!==ws)return;
-      if(!GL.ready){GL.tryI++;if(GL.tryI<GL.combos.length){setTimeout(glConnect,300)}else{toast('LIVE সংযোগ হয়নি'+(ev&&ev.reason?': '+String(ev.reason).slice(0,120):'')+'। পুরোনো পদ্ধতিতে কথা বলুন।');glStop()}return}
+      if(!GL.ready){if(ws._op&&c&&c[3]){try{localStorage.setItem('ar_nolang','1')}catch(e5){}}GL.tryI++;if(GL.tryI<GL.combos.length){setTimeout(glConnect,300)}else{toast('LIVE সংযোগ হয়নি'+(ev&&ev.reason?': '+String(ev.reason).slice(0,120):'')+'। পুরোনো পদ্ধতিতে কথা বলুন।');glStop()}return}
       if(Date.now()-GL.readyAt<6000)GL.rapid++;else GL.rapid=0;
       if(GL.rapid>3){toast('LIVE বারবার কেটে যাচ্ছে'+(ev&&ev.reason?': '+String(ev.reason).slice(0,100):''));glStop();return}
       $('spk').innerHTML='&bull; LIVE: আবার জুড়ছি &bull;';setTimeout(glConnect,300);
@@ -1210,7 +1212,7 @@ if(!window.Android){
     toast('LIVE চালু। ইয়ারফোন লাগালে ভালো হবে।');
     try{if(window.AndroidTTS&&AndroidTTS.boostVolume)AndroidTTS.boostVolume()}catch(e){}
     Promise.all([glModels(key).then(function(ms){
-      GL.combos=[];var vs=glVoices();ms.forEach(function(m){vs.forEach(function(v){GL.combos.push([m,v,true]);GL.combos.push([m,v,false])})});
+      GL.combos=[];var vs=glVoices();var nolang=false;try{nolang=localStorage.getItem('ar_nolang')==='1'}catch(e){}ms.forEach(function(m){if(!nolang&&/3\.8-live/.test(m))GL.combos.push([m,vs[0],true,true]);vs.forEach(function(v){GL.combos.push([m,v,true]);GL.combos.push([m,v,false])})});
     }),glMic()]).then(function(){glConnect()}).catch(function(e){
       var m=(e&&e.name==='NotAllowedError')?'মাইকের অনুমতি দিন (Allow)':(e&&e.message)||String(e);
       toast('LIVE শুরু হয়নি: '+m);glStop();
@@ -1608,7 +1610,7 @@ if(!window.Android){
   var still=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
   function frame(){
     var W=cv.width,R=W*0.355,c=W/2;cx.clearRect(0,0,W,W);
-    ang+=0.006*speed*(aiOn?1:0.2);
+    ang+=0.015*speed*(aiOn?1:0.2);
     var ca=Math.cos(ang),sa=Math.sin(ang),tilt=0.4,ct=Math.cos(tilt),st=Math.sin(tilt);
     var g0=cx.createRadialGradient(c,c,0,c,c,R*1.05);g0.addColorStop(0,'rgba(190,255,235,.55)');g0.addColorStop(.4,'rgba(60,255,200,.22)');g0.addColorStop(1,'rgba(60,255,200,0)');
     cx.fillStyle=g0;cx.beginPath();cx.arc(c,c,R*1.05,0,6.283);cx.fill();
