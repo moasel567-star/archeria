@@ -92,7 +92,7 @@ ul.tasks li.done{color:var(--dim);text-decoration:line-through}
 </head><body><div class="app">
   <div class="hdr">
     <span></span>
-    <h1><svg class="logo" viewBox="0 0 24 24"><path d="M12 2 3 21h18z" fill="#1fe86b"/><rect x="8" y="12.5" width="8" height="4" rx="2" fill="#031006"/></svg>ARCHER AI<small>v92</small></h1>
+    <h1><svg class="logo" viewBox="0 0 24 24"><path d="M12 2 3 21h18z" fill="#1fe86b"/><rect x="8" y="12.5" width="8" height="4" rx="2" fill="#031006"/></svg>ARCHER AI<small>v93</small></h1>
     <button class="sq" id="sq" aria-label="Settings">&#9881;</button>
   </div>
   <div class="row3">
@@ -1095,6 +1095,7 @@ if(!window.Android){
     var j;try{j=JSON.parse(txt)}catch(e){return}
     if(j.setupComplete){GL.ready=true;GL.readyAt=Date.now();GL.connMs=GL.readyAt-(GL.connAt||GL.readyAt);$('spk').innerHTML='&bull; LIVE: বলুন &bull;';
       /* silent warm-up: one tiny hidden turn so the FIRST real answer is fast. Its audio is never played. */
+      try{var mn=String((GL.combos[GL.tryI]||[''])[0]);if(/3\.8-live/.test(mn)){GL.warm=false;return}}catch(e0){}
       try{GL.warm=true;GL.ws.send(JSON.stringify({realtimeInput:{text:'Say only the word ok.'}}));var wsW=GL.ws;setTimeout(function(){if(GL.ws===wsW)GL.warm=false},7000)}catch(e){GL.warm=false}
       return}
     var sc=j.serverContent;
