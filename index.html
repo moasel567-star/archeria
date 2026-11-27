@@ -92,7 +92,7 @@ ul.tasks li.done{color:var(--dim);text-decoration:line-through}
 </head><body><div class="app">
   <div class="hdr">
     <span></span>
-    <h1><svg class="logo" viewBox="0 0 24 24"><path d="M12 2 3 21h18z" fill="#1fe86b"/><rect x="8" y="12.5" width="8" height="4" rx="2" fill="#031006"/></svg>ARCHER AI<small>v89</small></h1>
+    <h1><svg class="logo" viewBox="0 0 24 24"><path d="M12 2 3 21h18z" fill="#1fe86b"/><rect x="8" y="12.5" width="8" height="4" rx="2" fill="#031006"/></svg>ARCHER AI<small>v92</small></h1>
     <button class="sq" id="sq" aria-label="Settings">&#9881;</button>
   </div>
   <div class="row3">
@@ -675,13 +675,13 @@ if(!window.Android){
   function glKey(){try{return localStorage.getItem('ar_key')||''}catch(e){return ''}}
   function glB64(u8){var s='',i,n=u8.length,k=0x8000;for(i=0;i<n;i+=k)s+=String.fromCharCode.apply(null,u8.subarray(i,Math.min(n,i+k)));return btoa(s)}
   function glModels(key){
-    try{var cm=JSON.parse(localStorage.getItem('ar_glm')||'null');if(cm&&cm.ms&&cm.ms.length&&Date.now()-cm.t<43200000)return Promise.resolve(cm.ms)}catch(e){}
-    return glModels0(key).then(function(ms){try{localStorage.setItem('ar_glm',JSON.stringify({t:Date.now(),ms:ms}))}catch(e){}return ms});
+    try{var cm=JSON.parse(localStorage.getItem('ar_glm2')||'null');if(cm&&cm.ms&&cm.ms.length&&Date.now()-cm.t<43200000)return Promise.resolve(cm.ms)}catch(e){}
+    return glModels0(key).then(function(ms){try{localStorage.setItem('ar_glm2',JSON.stringify({t:Date.now(),ms:ms}))}catch(e){}return ms});
   }
   function glModels0(key){
     return fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200',{headers:{'x-goog-api-key':key}}).then(function(r){return r.json()}).then(function(j){
       var ms=(j.models||[]).filter(function(m){return (m.supportedGenerationMethods||[]).indexOf('bidiGenerateContent')>-1}).map(function(m){return m.name.replace('models/','')});
-      var sc=function(n){var x=0;if(/native-audio/.test(n))x+=10;if(/flash/.test(n))x+=3;if(/live/.test(n))x+=2;if(/preview|exp/.test(n))x-=0;if(/dialog|thinking/.test(n))x-=1;return x};
+      var sc=function(n){var x=0;if(/^gemini-3\.8-live$/.test(n))x+=20;if(/native-audio/.test(n))x+=10;if(/flash/.test(n))x+=3;if(/live/.test(n))x+=2;if(/preview|exp/.test(n))x-=0;if(/dialog|thinking/.test(n))x-=1;return x};
       ms.sort(function(a,b){return sc(b)-sc(a)||(a<b?1:-1)});
       if(!ms.length)throw new Error('এই key-তে LIVE মডেল নেই');
       return ms.slice(0,3);
@@ -702,14 +702,8 @@ if(!window.Android){
           /* silent-session recovery (the earlier end-of-speech nudge is removed: it could silence the session) */
           var nw=Date.now();if(GL.floor==null)GL.floor=0.01;
           if(rms<GL.floor*1.6)GL.floor=GL.floor*0.9+rms*0.1;else GL.floor=Math.min(0.08,GL.floor*1.003);
-          var spk=rms>Math.max(0.02,GL.floor*2.4)&&!window.__aiSpeaking&&!GL.speaking&&nw>(GL.ackUntil||0);
+          var spk=rms>Math.max(0.02,GL.floor*2.4)&&!window.__aiSpeaking&&!GL.speaking&&true;
           if(spk){GL.spN=(GL.spN||0)+1;GL.uN=(GL.uN||0)+1;GL.spLast=nw;GL.recov=false}
-          else if((GL.uN||0)>=3&&nw-GL.spLast>500&&(GL.lastModelAudio||0)<GL.spLast&&!GL.warm&&!window.__aiSpeaking&&!GL.speaking){
-            /* you finished speaking: instant soft 'got it' tone so the wait never feels empty */
-            GL.uN=0;GL.ackUntil=nw+350;try{glAck()}catch(e4){}
-          }
-          if(!spk&&(GL.uN||0)>0&&(GL.uN||0)<3&&nw-GL.spLast>1500)GL.uN=0;
-          if(spk){}
           else if((GL.spN||0)>=2&&nw-GL.spLast>8000&&(GL.lastModelAudio||0)<GL.spLast&&!GL.warm&&!GL.toolBusy&&!GL.recov){
             /* you spoke but nothing came back for 8s (session went silent): reconnect by itself */
             GL.recov=true;GL.spN=0;try{toast('উত্তর আসেনি, আবার জুড়ছি। আবার বলুন')}catch(e2){}try{GL.ws.close()}catch(e3){}
@@ -1080,12 +1074,7 @@ if(!window.Android){
     return{t:'ঠিক আছে, কাজটা ভেবে নিচ্ছি...'};
   }
 
-  function glAck(){
-      var ac=GL.ac;if(!ac||ac.state==='closed')return;
-      var t=ac.currentTime,g=ac.createGain();g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(0.07,t+0.015);g.gain.exponentialRampToValueAtTime(0.0001,t+0.16);g.connect(ac.destination);
-      [740,1109].forEach(function(fr,ix){var o=ac.createOscillator();o.type='sine';o.frequency.value=fr;o.connect(g);o.start(t+ix*0.07);o.stop(t+0.17)});
-    }
-    function glRun(name,args){
+  function glRun(name,args){
     try{
       if(name==='open_app'){
         var an=String(args&&args.name||'').trim();
