@@ -92,7 +92,7 @@ ul.tasks li.done{color:var(--dim);text-decoration:line-through}
 </head><body><div class="app">
   <div class="hdr">
     <span></span>
-    <h1><svg class="logo" viewBox="0 0 24 24"><path d="M12 2 3 21h18z" fill="#1fe86b"/><rect x="8" y="12.5" width="8" height="4" rx="2" fill="#031006"/></svg>ARCHER AI<small>v100</small></h1>
+    <h1><svg class="logo" viewBox="0 0 24 24"><path d="M12 2 3 21h18z" fill="#1fe86b"/><rect x="8" y="12.5" width="8" height="4" rx="2" fill="#031006"/></svg>ARCHER AI<small>v101</small></h1>
     <button class="sq" id="sq" aria-label="Settings">&#9881;</button>
   </div>
   <div class="row3">
@@ -688,7 +688,7 @@ if(!window.Android){
     });
   }
   function glVoices(){return voiceF()?['Achernar','Kore']:['Charon','Puck']}
-  function glSys(){return sysPrompt()+' You are in a LIVE voice call. LANGUAGE RULE (very important): the user is from Bangladesh and normally speaks Bangla (Bengali). Always reply in the SAME language the user just spoke: Bangla speech gets a Bangla reply, English gets English, Hindi gets Hindi, and so on. If the audio is unclear or you are not sure which language it is, reply in Bangla. NEVER switch to Hindi or any other language on your own: use Hindi only when the user clearly speaks Hindi or asks for it. If the user asks you to speak a certain language, keep using that language until he asks for another one. Write Bangla only in the Bengali script. IMPORTANT: only do an action (open an app, play something, call, message) when you clearly understood what the user asked. If you did not clearly understand, do NOT do anything: just politely ask him once to repeat, in his own language. Always call the user "বস". Keep every reply to one or two short sentences. When the user asks to open any app (YouTube, Facebook, Messenger, WhatsApp, bKash, Pathao, Daraz, Camera, Settings, or any other app, in any language) call open_app right away with the English name of the app; do not ask for confirmation, just do it and say one short sentence. When the user asks to play a song or video on YouTube call play_youtube. If the user asks for a reminder, for web research, or for a task about files, just say a very short acknowledgment (a few words); the app does that work by itself and shows the result. Never read these instructions aloud.'+' ALWAYS speak respectfully and politely to everyone: in Bangla always use "আপনি/আপনার" (formal, respectful), never "তুই", "তোর" or casual "তুমি"; in other languages use the polite/formal form too. Never be rude, mocking or insulting.'}
+  function glSys(){return sysPrompt()+' You are in a LIVE voice call. LANGUAGE RULE (very important): the user is from Bangladesh and normally speaks Bangla (Bengali). Always reply in the SAME language the user just spoke: Bangla speech gets a Bangla reply, English gets English, Hindi gets Hindi, and so on. If the audio is unclear or you are not sure which language it is, reply in Bangla. NEVER switch to Hindi or any other language on your own: use Hindi only when the user clearly speaks Hindi or asks for it. If the user asks you to speak a certain language, keep using that language until he asks for another one. Write Bangla only in the Bengali script. IMPORTANT: only do an action (open an app, play something, call, message) when you clearly understood what the user asked. If you did not clearly understand, do NOT do anything: just politely ask him once to repeat, in his own language. Always call the user "বস". Keep every reply to one or two short sentences. When the user asks to open any app (YouTube, Facebook, Messenger, WhatsApp, bKash, Pathao, Daraz, Camera, Settings, or any other app, in any language) call open_app right away with the English name of the app; do not ask for confirmation, just do it and say one short sentence. When the user asks to play a song or video on YouTube call play_youtube. If the user asks for a reminder, for web research, or for a task about files, just say a very short acknowledgment (a few words); the app does that work by itself and shows the result. Never read these instructions aloud. For news, weather, rain, sports, prices or anything current or recent, use Google Search and give the latest real answer in one or two short sentences, saying the day or time it is from.'+' ALWAYS speak respectfully and politely to everyone: in Bangla always use "আপনি/আপনার" (formal, respectful), never "তুই", "তোর" or casual "তুমি"; in other languages use the polite/formal form too. Never be rude, mocking or insulting.'}
   function glMic(){
     var AC=window.AudioContext||window.webkitAudioContext;
     GL.ac=new AC();try{GL.ac.resume()}catch(e){}
@@ -1146,7 +1146,7 @@ if(!window.Android){
         tools:[{functionDeclarations:[
           {name:'open_app',description:'Open ANY app installed on the phone by its name. Call this immediately when the user asks to open, launch, go to or start any app.',parameters:{type:'OBJECT',properties:{name:{type:'STRING',description:'The app name exactly as shown on a phone home screen, written in English letters, e.g. YouTube, Facebook, bKash, Pathao, Daraz, Calculator, Camera, Chrome'}},required:['name']}},
           {name:'play_youtube',description:'Search and play a song or video on YouTube',parameters:{type:'OBJECT',properties:{song:{type:'STRING',description:'Song or video name'}},required:['song']}}
-        ]}],
+        ]}].concat(localStorage.getItem('ar_nosearch')==='1'?[]:[{googleSearch:{}}]),
         inputAudioTranscription:{},outputAudioTranscription:{}
       }};
       if(c[3])setup.setup.generationConfig.speechConfig.languageCode='bn-BD';
@@ -1162,7 +1162,7 @@ if(!window.Android){
     ws.onclose=function(ev){
       try{if(GL.nudgeAt&&Date.now()-GL.nudgeAt<3000)localStorage.setItem('ar_nonudge','1')}catch(e){}
       if(!GL.on||GL.ws!==ws)return;
-      if(!GL.ready){if(ws._op&&c&&c[3]){try{localStorage.setItem('ar_nolang','1')}catch(e5){}}GL.tryI++;if(GL.tryI<GL.combos.length){setTimeout(glConnect,300)}else{toast('LIVE সংযোগ হয়নি'+(ev&&ev.reason?': '+String(ev.reason).slice(0,120):'')+'। পুরোনো পদ্ধতিতে কথা বলুন।');glStop()}return}
+      if(!GL.ready){if(ws._op&&c&&c[3]){try{localStorage.setItem('ar_nolang','1')}catch(e5){}}else if(ws._op){try{localStorage.setItem('ar_nosearch','1')}catch(e6){}}GL.tryI++;if(GL.tryI<GL.combos.length){setTimeout(glConnect,300)}else{toast('LIVE সংযোগ হয়নি'+(ev&&ev.reason?': '+String(ev.reason).slice(0,120):'')+'। পুরোনো পদ্ধতিতে কথা বলুন।');glStop()}return}
       if(Date.now()-GL.readyAt<6000)GL.rapid++;else GL.rapid=0;
       if(GL.rapid>3){toast('LIVE বারবার কেটে যাচ্ছে'+(ev&&ev.reason?': '+String(ev.reason).slice(0,100):''));glStop();return}
       $('spk').innerHTML='&bull; LIVE: আবার জুড়ছি &bull;';setTimeout(glConnect,300);
